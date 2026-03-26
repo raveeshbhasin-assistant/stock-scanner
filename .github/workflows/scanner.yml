@@ -1,0 +1,37 @@
+name: Stock Scanner
+
+on:
+  schedule:
+    - cron: '0 12 * * 1-5'
+    - cron: '45 12 * * 1-5'
+    - cron: '45 13 * * 1-5'
+    - cron: '30 15 * * 1-5'
+    - cron: '0 19 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run momentum scanner
+        env:
+          ALPHA_VANTAGE_KEY: ${{ secrets.ALPHA_VANTAGE_KEY }}
+        run: python scanner.py
+      - name: Commit and push results
+        run: |
+          git config user.name  "Scanner Bot"
+          git config user.email "scanner-bot@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Scanner update: $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
