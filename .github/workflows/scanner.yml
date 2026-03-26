@@ -1,5 +1,15 @@
 name: Stock Scanner
 
+# ─── SCHEDULE ──────────────────────────────────────────────────────────────
+# All times are UTC. Currently in EDT (UTC-4), March–November.
+#
+#  Slot          EDT      UTC (EDT)
+#  Pre-Market    8:00 AM  12:00
+#  Macro Check   8:45 AM  12:45
+#  True Open     9:45 AM  13:45
+#  Midday       11:30 AM  15:30
+#  Power Hour    3:00 PM  19:00
+
 on:
   schedule:
     - cron: '0 12 * * 1-5'
@@ -12,22 +22,31 @@ on:
 jobs:
   scan:
     runs-on: ubuntu-latest
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     permissions:
       contents: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
+
       - name: Install dependencies
         run: pip install -r requirements.txt
+
       - name: Run momentum scanner
         env:
           ALPHA_VANTAGE_KEY: ${{ secrets.ALPHA_VANTAGE_KEY }}
         run: python scanner.py
+
       - name: Commit and push results
         run: |
           git config user.name  "Scanner Bot"
