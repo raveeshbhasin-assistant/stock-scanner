@@ -3,22 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trading Scanner — Awaiting First Run</title>
+  <meta http-equiv="refresh" content="300">
+  <title>Trading Scanner &mdash; 3:00 PM EST — Power Hour Prep</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       background: #080b10;
       color: #c9d1d9;
-      font-family: 'Courier New', monospace;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 14px;
+      padding: 24px 16px 48px;
       min-height: 100vh;
-      text-align: center;
-      padding: 24px;
     }
-    .wrap { max-width: 500px; }
-    .badge {
+
+    /* ── Header ─────────────────────────────────────── */
+    .header {
+      text-align: center;
+      margin-bottom: 36px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #1c2030;
+    }
+    .header-badge {
       display: inline-block;
       background: #111827;
       border: 1px solid #2a3042;
@@ -28,61 +34,202 @@
       color: #6b7280;
       letter-spacing: 2px;
       text-transform: uppercase;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
     }
-    h1 { font-size: 24px; color: #e6edf3; margin-bottom: 10px; }
-    .sub { color: #6b7280; font-size: 14px; line-height: 1.7; margin-bottom: 24px; }
-    .times {
+    h1 {
+      font-size: 26px;
+      font-weight: bold;
+      color: #e6edf3;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .slot-label {
+      font-size: 14px;
+      color: #58a6ff;
+      margin-bottom: 4px;
+    }
+    .focus-text {
+      font-size: 12px;
+      color: #6b7280;
+      font-style: italic;
+      margin-bottom: 14px;
+    }
+    .scan-meta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .scan-meta .val { color: #e6edf3; }
+
+    /* ── Container ──────────────────────────────────── */
+    .container { max-width: 860px; margin: 0 auto; }
+
+    /* ── Cards ──────────────────────────────────────── */
+    .card {
       background: #0d1117;
       border: 1px solid #1c2030;
+      border-left: 4px solid #00d4ff;
       border-radius: 8px;
-      padding: 20px;
-      text-align: left;
+      padding: 22px 20px;
+      margin-bottom: 24px;
     }
-    .times h2 { font-size: 11px; color: #6b7280; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
-    .time-row {
+    .card-header {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .ticker {
+      font-size: 28px;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+    }
+    .price {
+      font-size: 22px;
+      color: #e6edf3;
+    }
+    .badge {
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .gap-up    { background: #0d2b1a; color: #00ff88; }
+    .gap-down  { background: #2b0d0d; color: #ff6b6b; }
+    .neutral   { background: #1a1f2e; color: #8b949e; }
+
+    /* ── Metrics grid ────────────────────────────────── */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .metric {
+      background: #111827;
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .lbl {
+      font-size: 9px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 5px;
+    }
+    .val { font-size: 14px; color: #e6edf3; }
+    .val.hot { color: #ffcc00; }
+
+    /* ── Catalyst ────────────────────────────────────── */
+    .catalyst-box {
+      background: #111827;
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }
+    .section-lbl {
+      display: block;
+      font-size: 9px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 7px;
+    }
+    .catalyst-box p {
+      font-size: 13px;
+      color: #c9d1d9;
+      line-height: 1.6;
+    }
+
+    /* ── Trade plan ─────────────────────────────────── */
+    .trade-plan {
+      background: #080b10;
+      border: 1px solid #1c2030;
+      border-radius: 6px;
+      padding: 14px 16px;
+    }
+    .trade-plan .section-lbl { margin-bottom: 10px; }
+    .trade-row {
       display: flex;
       justify-content: space-between;
-      padding: 6px 0;
+      align-items: flex-start;
+      padding: 8px 0;
       border-bottom: 1px solid #111827;
-      font-size: 13px;
+      gap: 16px;
     }
-    .time-row:last-child { border-bottom: none; }
-    .time-name { color: #8b949e; }
-    .time-val  { color: #58a6ff; }
+    .trade-row.last { border-bottom: none; }
+    .tl { color: #6b7280; white-space: nowrap; font-size: 12px; }
+    .tv { color: #e6edf3; text-align: right; font-size: 12px; }
+    .green { color: #00ff88; }
+    .red   { color: #ff6b6b; }
+
+    /* ── No setups ───────────────────────────────────── */
+    .no-setups {
+      text-align: center;
+      padding: 70px 20px;
+      border: 1px dashed #1c2030;
+      border-radius: 8px;
+    }
+    .no-icon { font-size: 44px; margin-bottom: 16px; color: #ffcc00; }
+    .no-msg  { font-size: 16px; color: #8b949e; margin-bottom: 8px; }
+    .no-sub  { font-size: 13px; color: #4b5563; }
+
+    /* ── Footer ─────────────────────────────────────── */
+    .footer {
+      text-align: center;
+      margin-top: 48px;
+      padding-top: 20px;
+      border-top: 1px solid #1c2030;
+      font-size: 11px;
+      color: #374151;
+      line-height: 1.8;
+    }
+
+    /* ── Mobile ─────────────────────────────────────── */
+    @media (max-width: 580px) {
+      .grid-2        { grid-template-columns: 1fr; }
+      .trade-row     { flex-direction: column; gap: 3px; }
+      .tv            { text-align: left; }
+      h1             { font-size: 20px; }
+      .ticker        { font-size: 22px; }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="badge">Elite Day Trading Research</div>
-    <h1>&#9650; Momentum Scanner</h1>
-    <p class="sub">
-      The scanner has not run yet. It will automatically execute
-      at the scheduled times below and replace this page with live results.
-    </p>
-    <div class="times">
-      <h2>Scheduled Scans (EST / EDT)</h2>
-      <div class="time-row">
-        <span class="time-name">Pre-Market Setup</span>
-        <span class="time-val">8:00 AM</span>
-      </div>
-      <div class="time-row">
-        <span class="time-name">Macro Check</span>
-        <span class="time-val">8:45 AM</span>
-      </div>
-      <div class="time-row">
-        <span class="time-name">True Open Trend</span>
-        <span class="time-val">9:45 AM</span>
-      </div>
-      <div class="time-row">
-        <span class="time-name">Midday Shift</span>
-        <span class="time-val">11:30 AM</span>
-      </div>
-      <div class="time-row">
-        <span class="time-name">Power Hour Prep</span>
-        <span class="time-val">3:00 PM</span>
+  <div class="container">
+
+    <div class="header">
+      <div class="header-badge">Elite Day Trading Research</div>
+      <h1>&#9650; Momentum Scanner</h1>
+      <div class="slot-label">3:00 PM EST — Power Hour Prep</div>
+      <div class="focus-text">Focus: Stocks consolidating near HOD preparing for end-of-day breakouts</div>
+      <div class="scan-meta">
+        <div>Scanned <span class="val">Mar 26, 2026  07:04 PM EST</span></div>
+        <div>SPY <span class="val" style="color:#ff6b6b">-1.00%</span></div>
+        <div>QQQ <span class="val" style="color:#ff6b6b">-1.39%</span></div>
+        <div>Setups Found <span class="val">0</span></div>
       </div>
     </div>
+
+    
+<div class="no-setups">
+  <div class="no-icon">&#9888;</div>
+  <div class="no-msg">No valid setups meet the strict criteria at this time.</div>
+  <div class="no-sub">Capital preservation is the priority. Stand aside and wait for the next scan.</div>
+</div>
+
+    <div class="footer">
+      Page auto-refreshes every 5 minutes &nbsp;&bull;&nbsp;
+      Powered by yfinance + Alpha Vantage &nbsp;&bull;&nbsp;
+      Rules: Cap&gt;$50B &middot; ADV&gt;5M &middot; ATR&ge;2.5% &middot; Price&gt;VWAP
+      &middot; RVOL&gt;1.5x &middot; 9/20-EMA &middot; Runway&ge;2% &middot; R/R&ge;1:2<br>
+      <strong>For informational &amp; research purposes only. Not financial advice. All trading involves substantial risk of loss.</strong>
+    </div>
+
   </div>
 </body>
 </html>
