@@ -336,13 +336,24 @@ def fetch_raw(ticker: str) -> dict | None:
 
         # Intraday 5-min data
         intra = tk.history(period='1d', interval='5m', auto_adjust=True)
-        if len(intra) < 6:
-            return None
+        session_active = len(intra) >= 6
+        if not session_active:
+            # Market is closed — fall back to most recent trading session
+            intra_5d = tk.history(period='5d', interval='5m', auto_adjust=True)
+            if len(intra_5d) < 6:
+                return None
+            intra_5d.index = intra_5d.index.tz_convert(EST)
+            last_date = intra_5d.index[-1].date()
+            intra = intra_5d[intra_5d.index.date == last_date]
+            if len(intra) < 6:
+                return None
 
-        # Pre/post market 1-min data
+        # Pre/post market 1-min data (use 2d period to capture weekend AH data)
         prepost = None
         try:
             prepost = tk.history(period='1d', interval='1m', prepost=True, auto_adjust=True)
+            if prepost is not None and len(prepost) == 0:
+                prepost = tk.history(period='2d', interval='1m', prepost=True, auto_adjust=True)
             if prepost is not None and len(prepost) > 0:
                 prepost.index = prepost.index.tz_convert(EST)
         except Exception:
@@ -384,6 +395,19 @@ def fetch_raw(ticker: str) -> dict | None:
         resistance, res_label = find_resistance(price, prev_day_high, week52_high, premarket_high)
         support, sup_label = find_support(price, prev_day_low, week52_low, premarket_low)
 
+        # Determine market session status and after-hours / pre-market price
+        ah_price = None
+        market_status = 'LIVE' if session_active else 'PREV CLOSE'
+        if prepost is not None and len(prepost) > 0:
+            last_ts = prepost.index[-1]
+            h, m = last_ts.hour, last_ts.minute
+            if h >= 16:
+                ah_price = float(prepost['Close'].iloc[-1])
+                market_status = 'AFTER HRS'
+            elif h < 9 or (h == 9 and m < 30):
+                ah_price = float(prepost['Close'].iloc[-1])
+                market_status = 'PRE-MKT'
+
         return {
             'ticker': ticker,
             'price': price,
@@ -407,6 +431,9 @@ def fetch_raw(ticker: str) -> dict | None:
             'prev_day_low': prev_day_low,
             'week52_high': week52_high,
             'week52_low': week52_low,
+            'session_active': session_active,
+            'ah_price': ah_price,
+            'market_status': market_status,
         }
 
     except Exception as e:
@@ -740,6 +767,9 @@ def fetch_monitor(ticker: str, spy_ret: float, qqq_ret: float) -> dict | None:
             'headline': headline,
             'long_checks': long_checks,
             'short_checks': short_checks,
+            'session_active': data.get('session_active', True),
+            'ah_price': data.get('ah_price'),
+            'market_status': data.get('market_status', 'LIVE'),
         }
 
     except Exception as e:
@@ -892,6 +922,53 @@ def _format_monitor_card(m: dict, spy_ret: float, qqq_ret: float) -> str:
     hl = m['headline'] or 'Monitoring price action and volatility.'
     sent = f"{m['sentiment_pct']:.0f}% Positive" if m['sentiment_pct'] is not None else 'N/A'
 
+    market_status = m.get('market_status', 'LIVE')
+    ah_price = m.get('ah_price')
+    session_active = m.get('session_active', True)
+
+    # Market status badge styling
+    status_colors = {
+        'LIVE':       ('#00ff88', '#003318'),
+        'AFTER HRS':  ('#f4a261', '#2d1a08'),
+        'PRE-MKT':    ('#58a6ff', '#0b1e35'),
+        'PREV CLOSE': ('#8b949e', '#161b22'),
+    }
+    status_fg, status_bg = status_colors.get(market_status, ('#8b949e', '#161b22'))
+    status_badge = (
+        f'<span style="background:{status_bg};color:{status_fg};border:1px solid {status_fg}44;'
+        f'border-radius:4px;padding:2px 8px;font-size:10px;letter-spacing:1px;">'
+        f'{market_status}</span>'
+    )
+
+    # Price display — show AH/PM price when available, last-session close otherwise
+    if ah_price is not None:
+        display_price = ah_price
+        price_label = 'Extended Hrs Price'
+        session_label = 'Extended Hrs'
+    elif not session_active:
+        display_price = m['price']
+        price_label = 'Last Session Close'
+        session_label = 'Last Session'
+    else:
+        display_price = m['price']
+        price_label = 'Current Price'
+        session_label = 'Today'
+
+    ah_row = ''
+    if ah_price is not None:
+        ah_chg = (ah_price - m['price']) / m['price'] * 100
+        ah_cls = 'hot' if ah_chg >= 0 else ''
+        ah_sign = '+' if ah_chg >= 0 else ''
+        ah_row = f"""
+    <div class="metric">
+      <div class="lbl">Last Session Close</div>
+      <div class="val">${m['price']:.2f}</div>
+    </div>
+    <div class="metric">
+      <div class="lbl">Extended Hrs Change</div>
+      <div class="val {ah_cls}">{ah_sign}{ah_chg:.2f}%</div>
+    </div>"""
+
     long_badges = ''
     for label, actual, threshold, passes in m['long_checks']:
         badge_class = 'check-pass' if passes else 'check-fail'
@@ -906,20 +983,21 @@ def _format_monitor_card(m: dict, spy_ret: float, qqq_ret: float) -> str:
 <div class="card monitor-card" style="border-left-color:{MONITOR_CARD_COLOR};">
   <div class="card-header">
     <span class="ticker" style="color:{MONITOR_CARD_COLOR};">{m['ticker']}</span>
-    <span class="price">${m['price']:.2f}</span>
+    <span class="price">${display_price:.2f}</span>
     <span class="badge {gap_cls}">{gap_sym} {abs(m['gap_pct']):.2f}%</span>
-    <span class="badge neutral">{m['ticker_ret']:+.2f}%</span>
+    <span class="badge neutral">{m['ticker_ret']:+.2f}% {session_label}</span>
+    {status_badge}
   </div>
 
   <div class="grid-2">
     <div class="metric">
-      <div class="lbl">Current Price</div>
-      <div class="val">${m['price']:.2f}</div>
+      <div class="lbl">{price_label}</div>
+      <div class="val">${display_price:.2f}</div>
     </div>
     <div class="metric">
-      <div class="lbl">Today's Return</div>
+      <div class="lbl">{session_label} Return</div>
       <div class="val hot">{m['ticker_ret']:+.2f}%</div>
-    </div>
+    </div>{ah_row}
     <div class="metric">
       <div class="lbl">Sentiment</div>
       <div class="val">{sent}</div>
@@ -936,12 +1014,12 @@ def _format_monitor_card(m: dict, spy_ret: float, qqq_ret: float) -> str:
   </div>
 
   <div class="checks-section">
-    <div class="checks-label">LONG Qualification</div>
+    <div class="checks-label">LONG Qualification ({session_label} data)</div>
     <div class="checks-row">{long_badges}</div>
   </div>
 
   <div class="checks-section">
-    <div class="checks-label">SHORT Qualification</div>
+    <div class="checks-label">SHORT Qualification ({session_label} data)</div>
     <div class="checks-row">{short_badges}</div>
   </div>
 </div>"""
