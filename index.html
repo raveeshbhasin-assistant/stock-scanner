@@ -3,122 +3,743 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Momentum Scanner — Awaiting First Run</title>
+  <meta http-equiv="refresh" content="300">
+  <title>Momentum Scanner &mdash; 11:30 AM EST — Midday Shift</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* ── Reset ──────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:     #07090e;
-      --s1:     #0d1018;
-      --s2:     #141820;
-      --border: rgba(255,255,255,0.06);
-      --t1:     #f0f2f7;
-      --t2:     rgba(240,242,247,0.55);
-      --t3:     rgba(240,242,247,0.28);
-      --blue:   #60a5fa;
-      --green:  #00d084;
+      --bg:      #07090e;
+      --s1:      #0d1018;
+      --s2:      #141820;
+      --s3:      #1b2130;
+      --border:  rgba(255,255,255,0.06);
+      --t1:      #f0f2f7;
+      --t2:      rgba(240,242,247,0.55);
+      --t3:      rgba(240,242,247,0.28);
+      --green:   #00d084;
+      --red:     #ff4b5a;
+      --amber:   #f59e0b;
+      --blue:    #60a5fa;
+      --purple:  #a78bfa;
+      --r:       12px;
+      --r-sm:    8px;
     }
     body {
       background: var(--bg);
       color: var(--t1);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 32px 20px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 0 16px 100px;
       -webkit-font-smoothing: antialiased;
     }
-    .wrap { max-width: 520px; width: 100%; text-align: center; }
-    .eyebrow {
+
+    /* ── Layout ─────────────────────────────── */
+    .wrap { max-width: 920px; margin: 0 auto; }
+
+    /* ── Page Header ────────────────────────── */
+    .pg-header {
+      text-align: center;
+      padding: 52px 0 40px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 52px;
+    }
+    .pg-eyebrow {
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 3px;
       text-transform: uppercase;
       color: var(--t3);
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
-    .title {
-      font-size: 36px;
+    .pg-title {
+      font-size: 38px;
       font-weight: 700;
-      letter-spacing: -0.8px;
+      letter-spacing: -1px;
       color: var(--t1);
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
-    .sub {
-      font-size: 14px;
+    .pg-slot {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--blue);
+      margin-bottom: 6px;
+    }
+    .pg-focus {
+      font-size: 13px;
       color: var(--t2);
-      line-height: 1.7;
-      margin-bottom: 36px;
+      font-style: italic;
+      margin-bottom: 30px;
     }
-    .times-card {
+    .pg-meta {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 28px;
+    }
+    .meta-item { font-size: 13px; color: var(--t2); }
+    .meta-val  { font-weight: 600; color: var(--t1); }
+
+    /* ── Section Heads ──────────────────────── */
+    .sec-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 60px;
+      margin-bottom: 24px;
+    }
+    .sec-head-title {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .sec-head-count {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 13px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--t2);
+    }
+    .sec-head-line { flex: 1; height: 1px; background: var(--border); }
+    .sec-head.long    .sec-head-title { color: var(--green);  }
+    .sec-head.short   .sec-head-title { color: var(--red);    }
+    .sec-head.monitor .sec-head-title { color: var(--purple); }
+
+    /* ── Cards ──────────────────────────────── */
+    .card {
       background: var(--s1);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-top: 2.5px solid var(--cc, var(--blue));
+      border-radius: var(--r);
       padding: 24px;
-      text-align: left;
+      margin-bottom: 20px;
     }
-    .times-title {
+
+    /* ── Card top row ───────────────────────── */
+    .card-top {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .logo-wrap { width: 42px; height: 42px; flex-shrink: 0; position: relative; }
+    .logo-img  {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      object-fit: contain;
+      background: #fff;
+      display: block;
+    }
+    .logo-fallback {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .card-id { flex: 1; min-width: 0; }
+    .card-ticker {
+      font-size: 27px;
+      font-weight: 700;
+      color: var(--cc, var(--t1));
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+    .card-dir {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .long-dir    { color: var(--green);  }
+    .short-dir   { color: var(--red);    }
+    .monitor-dir { color: var(--purple); }
+    .card-price-grp { text-align: right; flex-shrink: 0; }
+    .card-price {
+      font-size: 25px;
+      font-weight: 600;
+      color: var(--t1);
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+    .gbadge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .badge-up { background: rgba(0,208,132,0.13); color: var(--green); }
+    .badge-dn { background: rgba(255,75,90,0.13);  color: var(--red);  }
+
+    /* ── Trade Plan Box ─────────────────────── */
+    .tp-box {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 16px 18px;
+      margin-bottom: 16px;
+    }
+    .tp-eyebrow {
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2.5px;
       text-transform: uppercase;
       color: var(--t3);
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
-    .time-row {
+    .tp-row {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
+      align-items: baseline;
+      gap: 10px;
+      padding: 8px 0;
       border-bottom: 1px solid var(--border);
       font-size: 13px;
     }
-    .time-row:last-child { border-bottom: none; }
-    .time-name { color: var(--t2); font-weight: 500; }
-    .time-val  { color: var(--blue); font-weight: 600; font-size: 13px; }
-    .dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--green);
-      display: inline-block;
-      margin-right: 8px;
-      opacity: 0.6;
+    .tp-row.tp-last { border-bottom: none; padding-bottom: 0; }
+    .tp-icon  { width: 18px; text-align: center; flex-shrink: 0; font-size: 12px; }
+    .ti-entry  { color: var(--blue);  }
+    .ti-target { color: var(--green); }
+    .ti-stop   { color: var(--red);   }
+    .tp-key {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--t2);
+      width: 52px;
+      flex-shrink: 0;
+    }
+    .tp-val   { flex: 1; color: var(--t1); font-weight: 500; font-size: 13px; }
+    .tp-g     { color: var(--green); }
+    .tp-r     { color: var(--red);   }
+    .tp-muted { font-size: 11px; font-weight: 400; color: var(--t2); }
+
+    /* ── Metric Pills ───────────────────────── */
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .pill {
+      background: var(--s3);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pl {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--t3);
+    }
+    .pv { font-size: 13px; font-weight: 600; color: var(--t1); }
+    .pv-hi { color: var(--amber); }
+
+    /* ── Chart ──────────────────────────────── */
+    .chart-box {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 12px 12px 8px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .chart-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 6px;
+      padding-left: 2px;
+    }
+    .cleg       { font-size: 10px; font-weight: 500; color: var(--t2); }
+    .cleg-vwap  { color: rgba(245,158,11,0.9); }
+    .cleg-ema9  { color: rgba(96,165,250,0.85); }
+    .cleg-ema20 { color: rgba(100,116,139,0.7); }
+
+    /* ── Catalyst ───────────────────────────── */
+    .cat-box {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 14px 16px;
+    }
+    .sec-lbl {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--t3);
+      margin-bottom: 8px;
+    }
+    .cat-text {
+      font-size: 13px;
+      color: var(--t2);
+      line-height: 1.65;
+    }
+
+    /* ── Checks (Monitor) ───────────────────── */
+    .checks-section {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 14px 16px;
+      margin-top: 12px;
+    }
+    .checks-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .cbadge {
+      padding: 4px 10px;
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+    .cbp { background: rgba(0,208,132,0.12); color: var(--green); border: 1px solid rgba(0,208,132,0.22); }
+    .cbf { background: rgba(255,75,90,0.10);  color: var(--red);   border: 1px solid rgba(255,75,90,0.20);  }
+
+    /* ── No Setups ──────────────────────────── */
+    .no-setups {
+      text-align: center;
+      padding: 60px 20px;
+      border: 1px dashed var(--border);
+      border-radius: var(--r);
+    }
+    .no-icon { font-size: 32px; color: var(--amber); opacity: 0.5; margin-bottom: 12px; }
+    .no-msg  { font-size: 16px; font-weight: 600; color: var(--t2); margin-bottom: 6px; }
+    .no-sub  { font-size: 13px; color: var(--t3); }
+
+    /* ── How We Filter Section ──────────────── */
+    .rules-wrap {
+      margin-top: 80px;
+      padding-top: 56px;
+      border-top: 1px solid var(--border);
+    }
+    .rules-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--t1);
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .rules-sub {
+      font-size: 14px;
+      color: var(--t2);
+      margin-bottom: 40px;
+      max-width: 560px;
+    }
+    .rules-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+    .rule-card {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 22px;
+    }
+    .rule-card-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+    .rule-card.long-rc  .rule-card-title { color: var(--green);  }
+    .rule-card.short-rc .rule-card-title { color: var(--red);    }
+    .rule-card.both-rc  .rule-card-title { color: var(--blue);   }
+    .rule-item { margin-bottom: 14px; }
+    .rule-item:last-child { margin-bottom: 0; }
+    .rule-plain {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--t1);
+      margin-bottom: 3px;
+      line-height: 1.4;
+    }
+    .rule-tech {
+      font-size: 11px;
+      color: var(--t3);
+      font-family: 'SF Mono', 'Consolas', 'Menlo', monospace;
+      line-height: 1.5;
+    }
+
+    /* ── Footer ─────────────────────────────── */
+    .footer {
+      text-align: center;
+      margin-top: 48px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--t3);
+      line-height: 2.2;
+    }
+
+    /* ── Mobile ─────────────────────────────── */
+    @media (max-width: 620px) {
+      body { padding: 0 12px 80px; }
+      .card { padding: 18px 16px; }
+      .pg-title { font-size: 26px; }
+      .card-ticker { font-size: 22px; }
+      .card-price  { font-size: 20px; }
+      .rules-cols  { grid-template-columns: 1fr; }
+      .tp-row      { flex-wrap: wrap; }
+      .pg-meta     { gap: 16px; }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="eyebrow">Elite Day Trading Research</div>
-    <h1 class="title">Momentum Scanner</h1>
-    <p class="sub">
-      The scanner hasn't run yet. It executes at the scheduled times below
-      and replaces this page with live results automatically.
-    </p>
-    <div class="times-card">
-      <div class="times-title">Scheduled Scan Windows (EST / EDT)</div>
-      <div class="time-row">
-        <span class="time-name"><span class="dot"></span>Pre-Market Setup</span>
-        <span class="time-val">8:00 AM</span>
-      </div>
-      <div class="time-row">
-        <span class="time-name"><span class="dot"></span>Macro Check</span>
-        <span class="time-val">8:45 AM</span>
-      </div>
-      <div class="time-row">
-        <span class="time-name"><span class="dot"></span>True Open Trend</span>
-        <span class="time-val">9:45 AM</span>
-      </div>
-      <div class="time-row">
-        <span class="time-name"><span class="dot"></span>Midday Shift</span>
-        <span class="time-val">11:30 AM</span>
-      </div>
-      <div class="time-row">
-        <span class="time-name"><span class="dot"></span>Power Hour Prep</span>
-        <span class="time-val">3:00 PM</span>
+
+    <!-- ── Page Header ─────────────────────────────── -->
+    <div class="pg-header">
+      <div class="pg-eyebrow">Elite Day Trading Research</div>
+      <h1 class="pg-title">Momentum Scanner</h1>
+      <div class="pg-slot">11:30 AM EST — Midday Shift</div>
+      <div class="pg-focus">Focus: Sustained momentum into the European close</div>
+      <div class="pg-meta">
+        <div class="meta-item">Scanned &nbsp;<span class="meta-val">Mar 27, 2026  01:34 PM EST</span></div>
+        <div class="meta-item">SPY &nbsp;<span class="meta-val" style="color:#ff4b5a;">-0.53%</span></div>
+        <div class="meta-item">QQQ &nbsp;<span class="meta-val" style="color:#ff4b5a;">-0.69%</span></div>
+        <div class="meta-item">Longs &nbsp;<span class="meta-val">0</span></div>
+        <div class="meta-item">Shorts &nbsp;<span class="meta-val">2</span></div>
       </div>
     </div>
+
+    <!-- ── Long Setups ─────────────────────────────── -->
+    <div class="sec-head long">
+      <div class="sec-head-title">▲ Long Setups</div>
+      <div class="sec-head-count">0 found</div>
+      <div class="sec-head-line"></div>
+    </div>
+    
+<div class="no-setups">
+  <div class="no-icon">&#9650;</div>
+  <div class="no-msg">No long setups pass the filter right now.</div>
+  <div class="no-sub">Capital preservation is a valid position.</div>
+</div>
+
+    <!-- ── Short Setups ────────────────────────────── -->
+    <div class="sec-head short">
+      <div class="sec-head-title">▼ Short Setups</div>
+      <div class="sec-head-count">2 found</div>
+      <div class="sec-head-line"></div>
+    </div>
+    
+<div class="card" style="--cc:#ff4444;">
+  <div class="card-top">
+    <div class="logo-wrap"><img src="https://financialmodelingprep.com/image-stock/ARM.png" class="logo-img" alt="ARM" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="logo-fallback" style="background:#ff44441a;color:#ff4444;">AR</div></div>
+    <div class="card-id">
+      <div class="card-ticker">ARM</div>
+      <div class="card-dir short-dir">▼ SHORT</div>
+    </div>
+    <div class="card-price-grp">
+      <div class="card-price">$144.38</div>
+      <span class="gbadge badge-dn">▼ 6.73%</span>
+    </div>
+  </div>
+
+  <div class="tp-box">
+    <div class="tp-eyebrow">Trade Plan</div>
+    <div class="tp-row">
+      <span class="tp-icon ti-entry">➜</span>
+      <span class="tp-key">ENTER</span>
+      <span class="tp-val">Break below $100.02 with RVOL maintaining >1.2x</span>
+    </div>
+    <div class="tp-row">
+      <span class="tp-icon ti-target">◎</span>
+      <span class="tp-key">TARGET</span>
+      <span class="tp-val tp-g">$100.02 <span class="tp-muted">(&minus;30.7% · 52-Week Low)</span></span>
+    </div>
+    <div class="tp-row tp-last">
+      <span class="tp-icon ti-stop">✕</span>
+      <span class="tp-key">STOP</span>
+      <span class="tp-val tp-r">$145.71 VWAP <span class="tp-muted">(+0.9% risk · 1:33.3 R/R)</span></span>
+    </div>
+  </div>
+
+  <div class="pills">
+    <div class="pill"><span class="pl">RVOL</span><span class="pv pv-hi">1.8×</span></div>
+    <div class="pill"><span class="pl">DOWNSIDE</span><span class="pv">30.7%</span></div>
+    <div class="pill"><span class="pl">R/R</span><span class="pv">1:33.3</span></div>
+    <div class="pill"><span class="pl">RS vs SPY</span><span class="pv tp-r">-2.0%</span></div>
+    <div class="pill"><span class="pl">VWAP</span><span class="pv">$145.71</span></div>
+    <div class="pill"><span class="pl">EMA9</span><span class="pv">$144.56</span></div>
+    <div class="pill"><span class="pl">EMA20</span><span class="pv">$144.87</span></div>
+    <div class="pill"><span class="pl">ATR</span><span class="pv">7.0%</span></div>
+    <div class="pill"><span class="pl">CAP</span><span class="pv">$153B</span></div>
+    <div class="pill"><span class="pl">SENTIMENT</span><span class="pv" style="color:#00d084;">73% Positive</span></div>
+  </div>
+
+  <div class="chart-box"><svg viewBox="0 0 800 180" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style="width:100%;height:100px;display:block;"><defs><linearGradient id="cg_ARM_1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff4444" stop-opacity="0.4"/><stop offset="100%" stop-color="#ff4444" stop-opacity="0"/></linearGradient></defs><rect x="-7.7" y="148.0" width="15.4" height="32.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="8.6" y="166.9" width="15.4" height="13.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="25.0" y="166.2" width="15.4" height="13.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="41.3" y="169.0" width="15.4" height="11.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="57.6" y="169.7" width="15.4" height="10.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="73.9" y="168.3" width="15.4" height="11.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="90.3" y="172.4" width="15.4" height="7.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="106.6" y="169.4" width="15.4" height="10.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="122.9" y="172.9" width="15.4" height="7.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="139.2" y="173.3" width="15.4" height="6.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="155.6" y="172.4" width="15.4" height="7.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="171.9" y="175.9" width="15.4" height="4.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="188.2" y="175.6" width="15.4" height="4.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="204.5" y="176.7" width="15.4" height="3.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="220.9" y="176.6" width="15.4" height="3.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="237.2" y="175.9" width="15.4" height="4.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="253.5" y="176.2" width="15.4" height="3.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="269.9" y="174.2" width="15.4" height="5.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="286.2" y="175.7" width="15.4" height="4.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="302.5" y="177.7" width="15.4" height="2.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="318.8" y="177.9" width="15.4" height="2.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="335.2" y="178.4" width="15.4" height="1.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="351.5" y="176.8" width="15.4" height="3.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="367.8" y="177.5" width="15.4" height="2.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="384.1" y="177.7" width="15.4" height="2.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="400.5" y="177.6" width="15.4" height="2.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="416.8" y="178.3" width="15.4" height="1.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="433.1" y="178.8" width="15.4" height="1.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="449.4" y="178.0" width="15.4" height="2.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="465.8" y="176.5" width="15.4" height="3.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="482.1" y="177.7" width="15.4" height="2.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="498.4" y="178.5" width="15.4" height="1.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="514.7" y="178.3" width="15.4" height="1.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="531.1" y="178.5" width="15.4" height="1.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="547.4" y="179.0" width="15.4" height="1.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="563.7" y="177.9" width="15.4" height="2.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="580.1" y="177.2" width="15.4" height="2.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="596.4" y="177.9" width="15.4" height="2.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="612.7" y="178.6" width="15.4" height="1.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="629.0" y="178.2" width="15.4" height="1.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="645.4" y="179.2" width="15.4" height="0.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="661.7" y="179.0" width="15.4" height="1.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="678.0" y="179.1" width="15.4" height="0.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="694.3" y="178.6" width="15.4" height="1.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="710.7" y="178.9" width="15.4" height="1.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="727.0" y="179.0" width="15.4" height="1.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="743.3" y="176.9" width="15.4" height="3.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="759.6" y="178.3" width="15.4" height="1.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="776.0" y="178.7" width="15.4" height="1.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="792.3" y="180.0" width="15.4" height="0.0" fill="rgba(255,255,255,0.10)" rx="1"/><path d="M 0.0 41.2 L 16.3,25.7 L 32.7,73.8 L 49.0,81.8 L 65.3,95.3 L 81.6,112.4 L 98.0,115.9 L 114.3,136.3 L 130.6,94.0 L 146.9,72.0 L 163.3,84.5 L 179.6,93.8 L 195.9,57.3 L 212.2,86.5 L 228.6,99.0 L 244.9,94.9 L 261.2,84.5 L 277.6,87.5 L 293.9,93.0 L 310.2,90.0 L 326.5,97.7 L 342.9,102.0 L 359.2,88.5 L 375.5,80.2 L 391.8,73.2 L 408.2,70.0 L 424.5,72.8 L 440.8,69.3 L 457.1,57.3 L 473.5,51.6 L 489.8,61.0 L 506.1,64.7 L 522.4,69.5 L 538.8,72.6 L 555.1,73.6 L 571.4,80.8 L 587.8,81.8 L 604.1,95.3 L 620.4,95.5 L 636.7,81.6 L 653.1,88.9 L 669.4,99.6 L 685.7,90.8 L 702.0,81.2 L 718.4,83.2 L 734.7,90.8 L 751.0,96.9 L 767.3,108.7 L 783.7,100.4 L 800.0,98.7 L 800.0,144 L 0.0,144 Z" fill="url(#cg_ARM_1)" opacity="0.25"/><polyline points="0.0,41.2 16.3,39.7 32.7,43.0 49.0,46.7 65.3,51.2 81.6,57.1 98.0,62.8 114.3,69.6 130.6,72.0 146.9,72.0 163.3,73.2 179.6,75.1 195.9,73.6 212.2,74.7 228.6,77.1 244.9,78.7 261.2,79.3 277.6,80.0 293.9,81.2 310.2,82.2 326.5,83.6 342.9,85.3 359.2,85.7 375.5,85.1 391.8,84.0 408.2,82.6 424.5,81.8 440.8,80.6 457.1,78.3 473.5,75.7 489.8,74.4 506.1,73.4 522.4,73.2 538.8,73.0 555.1,73.2 571.4,73.8 587.8,74.5 604.1,76.5 620.4,78.5 636.7,78.7 653.1,79.6 669.4,81.6 685.7,82.4 702.0,82.4 718.4,82.4 734.7,83.2 751.0,84.5 767.3,86.9 783.7,88.1 800.0,89.1" fill="none" stroke="rgba(100,116,139,0.65)" stroke-width="1.2" stroke-dasharray="4,3" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/><polyline points="0.0,41.2 16.3,38.1 32.7,45.3 49.0,52.6 65.3,61.0 81.6,71.4 98.0,80.2 114.3,91.4 130.6,92.0 146.9,88.1 163.3,87.3 179.6,88.7 195.9,82.4 212.2,83.2 228.6,86.3 244.9,88.1 261.2,87.3 277.6,87.3 293.9,88.5 310.2,88.9 326.5,90.6 342.9,92.8 359.2,92.0 375.5,89.6 391.8,86.3 408.2,83.2 424.5,81.0 440.8,78.7 457.1,74.4 473.5,69.8 489.8,68.1 506.1,67.5 522.4,67.9 538.8,68.9 555.1,69.6 571.4,72.0 587.8,74.0 604.1,78.3 620.4,81.6 636.7,81.6 653.1,83.2 669.4,86.5 685.7,87.3 702.0,86.1 718.4,85.5 734.7,86.5 751.0,88.7 767.3,92.6 783.7,94.1 800.0,95.1" fill="none" stroke="rgba(96,165,250,0.80)" stroke-width="1.6" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/><polyline points="0.0,7.7 16.3,14.8 32.7,24.8 49.0,32.6 65.3,39.5 81.6,48.3 98.0,53.2 114.3,60.8 130.6,63.6 146.9,64.6 163.3,65.3 179.6,66.3 195.9,66.3 212.2,66.5 228.6,67.1 244.9,68.1 261.2,68.5 277.6,69.1 293.9,69.6 310.2,70.0 326.5,70.2 342.9,70.6 359.2,71.0 375.5,71.0 391.8,71.2 408.2,71.0 424.5,71.0 440.8,71.0 457.1,71.0 473.5,70.6 489.8,70.4 506.1,70.4 522.4,70.4 538.8,70.4 555.1,70.4 571.4,70.6 587.8,70.6 604.1,71.0 620.4,71.0 636.7,71.2 653.1,71.2 669.4,71.4 685.7,71.6 702.0,71.6 718.4,71.6 734.7,71.8 751.0,72.2 767.3,72.4 783.7,72.6 800.0,72.6" fill="none" stroke="rgba(251,191,36,0.90)" stroke-width="2.0" stroke-dasharray="5,3" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/><polyline points="0.0,41.2 16.3,25.7 32.7,73.8 49.0,81.8 65.3,95.3 81.6,112.4 98.0,115.9 114.3,136.3 130.6,94.0 146.9,72.0 163.3,84.5 179.6,93.8 195.9,57.3 212.2,86.5 228.6,99.0 244.9,94.9 261.2,84.5 277.6,87.5 293.9,93.0 310.2,90.0 326.5,97.7 342.9,102.0 359.2,88.5 375.5,80.2 391.8,73.2 408.2,70.0 424.5,72.8 440.8,69.3 457.1,57.3 473.5,51.6 489.8,61.0 506.1,64.7 522.4,69.5 538.8,72.6 555.1,73.6 571.4,80.8 587.8,81.8 604.1,95.3 620.4,95.5 636.7,81.6 653.1,88.9 669.4,99.6 685.7,90.8 702.0,81.2 718.4,83.2 734.7,90.8 751.0,96.9 767.3,108.7 783.7,100.4 800.0,98.7" fill="none" stroke="#ff4444" stroke-width="2.6" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/></svg><div class="chart-legend"><span class="cleg" style="color:#ff4444;">── Price</span><span class="cleg cleg-vwap">⋯ VWAP</span><span class="cleg cleg-ema9">── EMA9</span><span class="cleg cleg-ema20">── EMA20</span></div></div>
+
+  <div class="cat-box">
+    <div class="sec-lbl">Catalyst</div>
+    <div class="cat-text">Arm’s AI CPU Expansion Pushes Market Sentiment Higher… (StocksToTrade)</div>
+  </div>
+</div>
+<div class="card" style="--cc:#ff6b6b;">
+  <div class="card-top">
+    <div class="logo-wrap"><img src="https://financialmodelingprep.com/image-stock/C.png" class="logo-img" alt="C" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="logo-fallback" style="background:#ff6b6b1a;color:#ff6b6b;">C</div></div>
+    <div class="card-id">
+      <div class="card-ticker">C</div>
+      <div class="card-dir short-dir">▼ SHORT</div>
+    </div>
+    <div class="card-price-grp">
+      <div class="card-price">$108.17</div>
+      <span class="gbadge badge-dn">▼ 3.77%</span>
+    </div>
+  </div>
+
+  <div class="tp-box">
+    <div class="tp-eyebrow">Trade Plan</div>
+    <div class="tp-row">
+      <span class="tp-icon ti-entry">➜</span>
+      <span class="tp-key">ENTER</span>
+      <span class="tp-val">Break below $102.01 with RVOL maintaining >1.2x</span>
+    </div>
+    <div class="tp-row">
+      <span class="tp-icon ti-target">◎</span>
+      <span class="tp-key">TARGET</span>
+      <span class="tp-val tp-g">$102.01 <span class="tp-muted">(&minus;5.7% · 52-Week Low)</span></span>
+    </div>
+    <div class="tp-row tp-last">
+      <span class="tp-icon ti-stop">✕</span>
+      <span class="tp-key">STOP</span>
+      <span class="tp-val tp-r">$108.99 VWAP <span class="tp-muted">(+0.8% risk · 1:7.5 R/R)</span></span>
+    </div>
+  </div>
+
+  <div class="pills">
+    <div class="pill"><span class="pl">RVOL</span><span class="pv pv-hi">1.5×</span></div>
+    <div class="pill"><span class="pl">DOWNSIDE</span><span class="pv">5.7%</span></div>
+    <div class="pill"><span class="pl">R/R</span><span class="pv">1:7.5</span></div>
+    <div class="pill"><span class="pl">RS vs SPY</span><span class="pv tp-r">-1.7%</span></div>
+    <div class="pill"><span class="pl">VWAP</span><span class="pv">$108.99</span></div>
+    <div class="pill"><span class="pl">EMA9</span><span class="pv">$108.41</span></div>
+    <div class="pill"><span class="pl">EMA20</span><span class="pv">$108.73</span></div>
+    <div class="pill"><span class="pl">ATR</span><span class="pv">3.5%</span></div>
+    <div class="pill"><span class="pl">CAP</span><span class="pv">$189B</span></div>
+    <div class="pill"><span class="pl">SENTIMENT</span><span class="pv" style="color:#f59e0b;">53% Positive</span></div>
+  </div>
+
+  <div class="chart-box"><svg viewBox="0 0 800 180" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style="width:100%;height:100px;display:block;"><defs><linearGradient id="cg_C_2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff6b6b" stop-opacity="0.4"/><stop offset="100%" stop-color="#ff6b6b" stop-opacity="0"/></linearGradient></defs><rect x="-7.7" y="175.4" width="15.4" height="4.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="8.6" y="175.5" width="15.4" height="4.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="25.0" y="177.6" width="15.4" height="2.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="41.3" y="178.1" width="15.4" height="1.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="57.6" y="178.4" width="15.4" height="1.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="73.9" y="177.3" width="15.4" height="2.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="90.3" y="176.4" width="15.4" height="3.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="106.6" y="176.9" width="15.4" height="3.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="122.9" y="177.1" width="15.4" height="2.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="139.2" y="177.6" width="15.4" height="2.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="155.6" y="177.9" width="15.4" height="2.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="171.9" y="178.9" width="15.4" height="1.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="188.2" y="178.0" width="15.4" height="2.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="204.5" y="178.9" width="15.4" height="1.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="220.9" y="178.7" width="15.4" height="1.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="237.2" y="178.2" width="15.4" height="1.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="253.5" y="178.4" width="15.4" height="1.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="269.9" y="178.8" width="15.4" height="1.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="286.2" y="178.8" width="15.4" height="1.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="302.5" y="178.7" width="15.4" height="1.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="318.8" y="179.2" width="15.4" height="0.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="335.2" y="178.9" width="15.4" height="1.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="351.5" y="178.7" width="15.4" height="1.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="367.8" y="178.9" width="15.4" height="1.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="384.1" y="179.0" width="15.4" height="1.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="400.5" y="179.0" width="15.4" height="1.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="416.8" y="179.3" width="15.4" height="0.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="433.1" y="179.1" width="15.4" height="0.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="449.4" y="179.2" width="15.4" height="0.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="465.8" y="161.5" width="15.4" height="18.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="482.1" y="152.3" width="15.4" height="27.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="498.4" y="167.9" width="15.4" height="12.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="514.7" y="172.3" width="15.4" height="7.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="531.1" y="148.0" width="15.4" height="32.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="547.4" y="163.3" width="15.4" height="16.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="563.7" y="177.1" width="15.4" height="2.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="580.1" y="177.2" width="15.4" height="2.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="596.4" y="176.0" width="15.4" height="4.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="612.7" y="175.5" width="15.4" height="4.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="629.0" y="176.5" width="15.4" height="3.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="645.4" y="177.9" width="15.4" height="2.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="661.7" y="178.5" width="15.4" height="1.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="678.0" y="177.8" width="15.4" height="2.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="694.3" y="177.7" width="15.4" height="2.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="710.7" y="178.4" width="15.4" height="1.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="727.0" y="178.3" width="15.4" height="1.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="743.3" y="177.6" width="15.4" height="2.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="759.6" y="177.8" width="15.4" height="2.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="776.0" y="176.8" width="15.4" height="3.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="792.3" y="180.0" width="15.4" height="0.0" fill="rgba(255,255,255,0.10)" rx="1"/><path d="M 0.0 57.8 L 16.3,39.0 L 32.7,32.5 L 49.0,7.7 L 65.3,30.5 L 81.6,47.4 L 98.0,41.9 L 114.3,72.5 L 130.6,51.7 L 146.9,43.5 L 163.3,42.9 L 179.6,45.5 L 195.9,39.0 L 212.2,35.7 L 228.6,41.6 L 244.9,35.1 L 261.2,37.3 L 277.6,38.6 L 293.9,30.2 L 310.2,36.0 L 326.5,39.6 L 342.9,41.2 L 359.2,38.3 L 375.5,30.2 L 391.8,22.0 L 408.2,21.1 L 424.5,24.3 L 440.8,23.0 L 457.1,26.6 L 473.5,78.0 L 489.8,124.9 L 506.1,136.3 L 522.4,105.4 L 538.8,132.4 L 555.1,122.9 L 571.4,115.8 L 587.8,118.1 L 604.1,121.3 L 620.4,102.4 L 636.7,97.6 L 653.1,101.8 L 669.4,101.5 L 685.7,100.2 L 702.0,93.0 L 718.4,100.8 L 734.7,100.8 L 751.0,110.2 L 767.3,126.2 L 783.7,122.3 L 800.0,120.0 L 800.0,144 L 0.0,144 Z" fill="url(#cg_C_2)" opacity="0.25"/><polyline points="0.0,57.8 16.3,55.9 32.7,53.9 49.0,49.4 65.3,47.8 81.6,47.8 98.0,47.1 114.3,49.4 130.6,49.7 146.9,49.1 163.3,48.4 179.6,48.1 195.9,47.4 212.2,46.1 228.6,45.8 244.9,44.8 261.2,44.2 277.6,43.5 293.9,42.2 310.2,41.6 326.5,41.6 342.9,41.6 359.2,41.2 375.5,40.3 391.8,38.3 408.2,36.7 424.5,35.7 440.8,34.4 457.1,33.8 473.5,38.0 489.8,46.1 506.1,54.6 522.4,59.5 538.8,66.6 555.1,71.8 571.4,76.1 587.8,80.0 604.1,83.9 620.4,85.8 636.7,86.8 653.1,88.4 669.4,89.4 685.7,90.7 702.0,90.7 718.4,91.7 734.7,92.7 751.0,94.3 767.3,97.2 783.7,99.8 800.0,101.8" fill="none" stroke="rgba(100,116,139,0.65)" stroke-width="1.2" stroke-dasharray="4,3" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/><polyline points="0.0,57.8 16.3,53.9 32.7,49.7 49.0,41.2 65.3,39.3 81.6,40.9 98.0,40.9 114.3,47.4 130.6,48.1 146.9,47.1 163.3,46.4 179.6,46.1 195.9,44.8 212.2,42.9 228.6,42.5 244.9,41.2 261.2,40.3 277.6,39.9 293.9,38.0 310.2,37.7 326.5,38.0 342.9,38.6 359.2,38.6 375.5,37.0 391.8,34.1 408.2,31.5 424.5,29.8 440.8,28.5 457.1,28.2 473.5,38.0 489.8,55.6 506.1,71.8 522.4,78.3 538.8,89.1 555.1,95.9 571.4,99.8 587.8,103.4 604.1,107.0 620.4,106.3 636.7,104.4 653.1,104.1 669.4,103.4 685.7,102.8 702.0,100.8 718.4,100.8 734.7,100.8 751.0,102.8 767.3,107.3 783.7,110.2 800.0,112.2" fill="none" stroke="rgba(96,165,250,0.80)" stroke-width="1.6" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/><polyline points="0.0,46.1 16.3,48.7 32.7,46.1 49.0,41.2 65.3,39.3 81.6,39.9 98.0,40.6 114.3,43.5 130.6,45.1 146.9,45.1 163.3,45.1 179.6,45.1 195.9,44.8 212.2,44.5 228.6,44.5 244.9,44.2 261.2,43.8 277.6,43.5 293.9,43.5 310.2,43.2 326.5,43.2 342.9,42.9 359.2,42.9 375.5,42.5 391.8,42.2 408.2,41.9 424.5,41.6 440.8,41.2 457.1,40.9 473.5,48.4 489.8,67.0 506.1,74.1 522.4,76.7 538.8,86.2 555.1,89.7 571.4,90.4 587.8,90.7 604.1,91.4 620.4,91.7 636.7,92.0 653.1,92.0 669.4,92.0 685.7,92.3 702.0,92.3 718.4,92.3 734.7,92.3 751.0,92.7 767.3,93.0 783.7,93.3 800.0,93.3" fill="none" stroke="rgba(251,191,36,0.90)" stroke-width="2.0" stroke-dasharray="5,3" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/><polyline points="0.0,57.8 16.3,39.0 32.7,32.5 49.0,7.7 65.3,30.5 81.6,47.4 98.0,41.9 114.3,72.5 130.6,51.7 146.9,43.5 163.3,42.9 179.6,45.5 195.9,39.0 212.2,35.7 228.6,41.6 244.9,35.1 261.2,37.3 277.6,38.6 293.9,30.2 310.2,36.0 326.5,39.6 342.9,41.2 359.2,38.3 375.5,30.2 391.8,22.0 408.2,21.1 424.5,24.3 440.8,23.0 457.1,26.6 473.5,78.0 489.8,124.9 506.1,136.3 522.4,105.4 538.8,132.4 555.1,122.9 571.4,115.8 587.8,118.1 604.1,121.3 620.4,102.4 636.7,97.6 653.1,101.8 669.4,101.5 685.7,100.2 702.0,93.0 718.4,100.8 734.7,100.8 751.0,110.2 767.3,126.2 783.7,122.3 800.0,120.0" fill="none" stroke="#ff6b6b" stroke-width="2.6" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/></svg><div class="chart-legend"><span class="cleg" style="color:#ff6b6b;">── Price</span><span class="cleg cleg-vwap">⋯ VWAP</span><span class="cleg cleg-ema9">── EMA9</span><span class="cleg cleg-ema20">── EMA20</span></div></div>
+
+  <div class="cat-box">
+    <div class="sec-lbl">Catalyst</div>
+    <div class="cat-text">Citigroup Inc's top executives are weighing buying another bank - Bloomberg News… (marketscreener.com)</div>
+  </div>
+</div>
+
+    <!-- ── Market Monitor ──────────────────────────── -->
+    <div class="sec-head monitor">
+      <div class="sec-head-title">◉ Market Monitor</div>
+      <div class="sec-head-count">GOOGL &amp; NVDA</div>
+      <div class="sec-head-line"></div>
+    </div>
+    
+<div class="card" style="--cc:#8b5cf6;">
+  <div class="card-top">
+    <div class="logo-wrap"><img src="https://financialmodelingprep.com/image-stock/GOOGL.png" class="logo-img" alt="GOOGL" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="logo-fallback" style="background:#8b5cf61a;color:#8b5cf6;">GO</div></div>
+    <div class="card-id">
+      <div class="card-ticker">GOOGL</div>
+      <div class="card-dir monitor-dir">◉ MONITOR</div>
+    </div>
+    <div class="card-price-grp">
+      <div class="card-price">$274.86</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap;">
+        <span class="gbadge badge-dn">▼ 2.16%</span>
+        <span style="background:rgba(0,208,132,0.12);color:#00d084;border:1px solid #00d084;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:1px;">LIVE</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pills">
+    <div class="pill"><span class="pl">CURRENT PRICE</span><span class="pv">$274.86</span></div>
+    <div class="pill"><span class="pl">TODAY RETURN</span><span class="pv tp-r">-0.54%</span></div>
+    
+    <div class="pill"><span class="pl">SPY</span><span class="pv tp-r">-0.53%</span></div>
+    <div class="pill"><span class="pl">QQQ</span><span class="pv tp-r">-0.69%</span></div>
+    <div class="pill"><span class="pl">SENTIMENT</span><span class="pv">49% Positive</span></div>
+  </div>
+
+  <div class="chart-box"><svg viewBox="0 0 800 180" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style="width:100%;height:100px;display:block;"><defs><linearGradient id="cg_GOOGL_3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.4"/><stop offset="100%" stop-color="#8b5cf6" stop-opacity="0"/></linearGradient></defs><rect x="-7.9" y="148.0" width="15.7" height="32.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="8.8" y="167.1" width="15.7" height="12.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="25.5" y="170.7" width="15.7" height="9.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="42.1" y="171.8" width="15.7" height="8.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="58.8" y="174.6" width="15.7" height="5.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="75.5" y="174.9" width="15.7" height="5.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="92.1" y="174.6" width="15.7" height="5.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="108.8" y="173.8" width="15.7" height="6.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="125.5" y="174.5" width="15.7" height="5.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="142.1" y="174.6" width="15.7" height="5.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="158.8" y="175.3" width="15.7" height="4.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="175.5" y="176.4" width="15.7" height="3.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="192.1" y="175.4" width="15.7" height="4.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="208.8" y="176.1" width="15.7" height="3.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="225.5" y="176.3" width="15.7" height="3.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="242.1" y="175.4" width="15.7" height="4.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="258.8" y="173.4" width="15.7" height="6.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="275.5" y="177.1" width="15.7" height="2.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="292.1" y="177.0" width="15.7" height="3.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="308.8" y="176.1" width="15.7" height="3.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="325.5" y="176.6" width="15.7" height="3.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="342.1" y="175.9" width="15.7" height="4.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="358.8" y="176.2" width="15.7" height="3.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="375.5" y="177.7" width="15.7" height="2.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="392.1" y="172.6" width="15.7" height="7.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="408.8" y="170.8" width="15.7" height="9.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="425.5" y="177.0" width="15.7" height="3.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="442.1" y="177.9" width="15.7" height="2.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="458.8" y="177.4" width="15.7" height="2.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="475.5" y="177.7" width="15.7" height="2.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="492.1" y="177.5" width="15.7" height="2.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="508.8" y="176.3" width="15.7" height="3.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="525.5" y="176.6" width="15.7" height="3.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="542.1" y="176.4" width="15.7" height="3.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="558.8" y="175.6" width="15.7" height="4.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="575.5" y="176.3" width="15.7" height="3.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="592.1" y="175.5" width="15.7" height="4.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="608.8" y="177.1" width="15.7" height="2.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="625.5" y="176.8" width="15.7" height="3.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="642.1" y="175.6" width="15.7" height="4.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="658.8" y="177.7" width="15.7" height="2.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="675.5" y="177.9" width="15.7" height="2.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="692.1" y="177.0" width="15.7" height="3.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="708.8" y="176.7" width="15.7" height="3.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="725.5" y="177.8" width="15.7" height="2.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="742.1" y="177.0" width="15.7" height="3.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="758.8" y="175.7" width="15.7" height="4.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="775.5" y="173.3" width="15.7" height="6.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="792.1" y="175.9" width="15.7" height="4.1" fill="rgba(255,255,255,0.10)" rx="1"/><path d="M 0.0 87.6 L 16.7,118.4 L 33.3,54.1 L 50.0,48.5 L 66.7,61.1 L 83.3,76.4 L 100.0,52.3 L 116.7,59.4 L 133.3,38.5 L 150.0,26.5 L 166.7,37.7 L 183.3,40.6 L 200.0,41.8 L 216.7,38.2 L 233.3,13.3 L 250.0,7.7 L 266.7,19.2 L 283.3,13.3 L 300.0,13.3 L 316.7,24.2 L 333.3,47.3 L 350.0,43.8 L 366.7,33.8 L 383.3,31.2 L 400.0,26.5 L 416.7,43.8 L 433.3,41.8 L 450.0,50.3 L 466.7,47.9 L 483.3,48.2 L 500.0,59.4 L 516.7,71.1 L 533.3,65.2 L 550.0,72.0 L 566.7,74.9 L 583.3,78.2 L 600.0,78.2 L 616.7,89.0 L 633.3,76.4 L 650.0,70.2 L 666.7,69.9 L 683.3,76.4 L 700.0,88.7 L 716.7,82.0 L 733.3,85.8 L 750.0,103.1 L 766.7,119.8 L 783.3,136.3 L 800.0,131.3 L 800.0,144 L 0.0,144 Z" fill="url(#cg_GOOGL_3)" opacity="0.25"/><polyline points="0.0,87.6 16.7,90.5 33.3,87.0 50.0,83.4 66.7,81.1 83.3,80.8 100.0,78.2 116.7,76.4 133.3,72.6 150.0,68.2 166.7,65.2 183.3,62.9 200.0,60.8 216.7,58.8 233.3,54.4 250.0,50.0 266.7,47.0 283.3,43.8 300.0,40.9 316.7,39.4 333.3,40.0 350.0,40.6 366.7,39.7 383.3,39.1 400.0,37.9 416.7,38.5 433.3,38.8 450.0,39.7 466.7,40.6 483.3,41.2 500.0,42.9 516.7,45.6 533.3,47.6 550.0,50.0 566.7,52.3 583.3,54.7 600.0,57.0 616.7,60.0 633.3,61.7 650.0,62.3 666.7,63.2 683.3,64.4 700.0,66.7 716.7,68.2 733.3,69.9 750.0,73.2 766.7,77.6 783.3,83.2 800.0,87.6" fill="none" stroke="rgba(100,116,139,0.65)" stroke-width="1.2" stroke-dasharray="4,3" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/><polyline points="0.0,87.6 16.7,93.7 33.3,85.8 50.0,78.5 66.7,74.9 83.3,75.2 100.0,70.5 116.7,68.5 133.3,62.3 150.0,55.3 166.7,51.7 183.3,49.4 200.0,47.9 216.7,45.9 233.3,39.4 250.0,33.3 266.7,30.3 283.3,26.8 300.0,24.2 316.7,24.2 333.3,28.8 350.0,31.8 366.7,32.1 383.3,32.1 400.0,30.9 416.7,33.5 433.3,35.0 450.0,38.2 466.7,40.0 483.3,41.8 500.0,45.3 516.7,50.6 533.3,53.5 550.0,57.0 566.7,60.6 583.3,64.1 600.0,67.0 616.7,71.4 633.3,72.3 650.0,72.0 666.7,71.7 683.3,72.6 700.0,75.8 716.7,77.0 733.3,78.8 750.0,83.7 766.7,90.8 783.3,99.9 800.0,106.3" fill="none" stroke="rgba(96,165,250,0.80)" stroke-width="1.6" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/><polyline points="0.0,63.8 16.7,75.8 33.3,75.8 50.0,72.0 66.7,70.8 83.3,70.8 100.0,69.9 116.7,68.8 133.3,67.3 150.0,65.0 166.7,63.2 183.3,62.3 200.0,61.4 216.7,60.8 233.3,59.4 250.0,57.6 266.7,55.6 283.3,54.7 300.0,53.5 316.7,52.6 333.3,52.3 350.0,52.0 366.7,51.7 383.3,51.5 400.0,50.3 416.7,49.7 433.3,49.4 450.0,49.4 466.7,49.4 483.3,49.4 500.0,49.4 516.7,50.0 533.3,50.3 550.0,50.6 566.7,51.2 583.3,51.5 600.0,52.0 616.7,52.6 633.3,52.9 650.0,53.5 666.7,53.5 683.3,53.8 700.0,54.1 716.7,54.7 733.3,55.0 750.0,55.6 766.7,56.4 783.3,58.8 800.0,60.0" fill="none" stroke="rgba(251,191,36,0.90)" stroke-width="2.0" stroke-dasharray="5,3" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/><polyline points="0.0,87.6 16.7,118.4 33.3,54.1 50.0,48.5 66.7,61.1 83.3,76.4 100.0,52.3 116.7,59.4 133.3,38.5 150.0,26.5 166.7,37.7 183.3,40.6 200.0,41.8 216.7,38.2 233.3,13.3 250.0,7.7 266.7,19.2 283.3,13.3 300.0,13.3 316.7,24.2 333.3,47.3 350.0,43.8 366.7,33.8 383.3,31.2 400.0,26.5 416.7,43.8 433.3,41.8 450.0,50.3 466.7,47.9 483.3,48.2 500.0,59.4 516.7,71.1 533.3,65.2 550.0,72.0 566.7,74.9 583.3,78.2 600.0,78.2 616.7,89.0 633.3,76.4 650.0,70.2 666.7,69.9 683.3,76.4 700.0,88.7 716.7,82.0 733.3,85.8 750.0,103.1 766.7,119.8 783.3,136.3 800.0,131.3" fill="none" stroke="#8b5cf6" stroke-width="2.6" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/></svg><div class="chart-legend"><span class="cleg" style="color:#8b5cf6;">── Price</span><span class="cleg cleg-vwap">⋯ VWAP</span><span class="cleg cleg-ema9">── EMA9</span><span class="cleg cleg-ema20">── EMA20</span></div></div>
+
+  <div class="cat-box">
+    <div class="sec-lbl">Headline</div>
+    <div class="cat-text">Visa Inc Stock (V) Moved Down by 3.23% on Mar 27: Drivers Behind the Movement… (TradingKey)</div>
+  </div>
+
+  <div class="checks-section">
+    <div class="sec-lbl">Long Qualification (Today data)</div>
+    <div class="checks-row"><span class="cbadge cbp">✓ Cap $3325B</span><span class="cbadge cbp">✓ ADV 33.4M</span><span class="cbadge cbp">✓ ATR 2.8%</span><span class="cbadge cbf">✗ P>VWAP $274.86>$277.29</span><span class="cbadge cbf">✗ RVOL 1.0x</span><span class="cbadge cbf">✗ EMAs↑ 9E:276 20E:276</span><span class="cbadge cbp">✓ RS↑ -0.5%</span><span class="cbadge cbp">✓ Runway 3.3%</span><span class="cbadge cbf">✗ R/R 1:0.0</span></div>
+  </div>
+
+  <div class="checks-section">
+    <div class="sec-lbl">Short Qualification (Today data)</div>
+    <div class="checks-row"><span class="cbadge cbp">✓ Cap $3325B</span><span class="cbadge cbp">✓ ADV 33.4M</span><span class="cbadge cbp">✓ ATR 2.8%</span><span class="cbadge cbp">✓ P<VWAP $274.86<277.29</span><span class="cbadge cbf">✗ RVOL 1.0x</span><span class="cbadge cbp">✓ EMAs↓ 9E:276 20E:276</span><span class="cbadge cbf">✗ RS↓ -0.5%</span></div>
+  </div>
+</div>
+<div class="card" style="--cc:#8b5cf6;">
+  <div class="card-top">
+    <div class="logo-wrap"><img src="https://financialmodelingprep.com/image-stock/NVDA.png" class="logo-img" alt="NVDA" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="logo-fallback" style="background:#8b5cf61a;color:#8b5cf6;">NV</div></div>
+    <div class="card-id">
+      <div class="card-ticker">NVDA</div>
+      <div class="card-dir monitor-dir">◉ MONITOR</div>
+    </div>
+    <div class="card-price-grp">
+      <div class="card-price">$168.04</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap;">
+        <span class="gbadge badge-dn">▼ 1.87%</span>
+        <span style="background:rgba(0,208,132,0.12);color:#00d084;border:1px solid #00d084;border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:1px;">LIVE</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="pills">
+    <div class="pill"><span class="pl">CURRENT PRICE</span><span class="pv">$168.04</span></div>
+    <div class="pill"><span class="pl">TODAY RETURN</span><span class="pv tp-r">-0.97%</span></div>
+    
+    <div class="pill"><span class="pl">SPY</span><span class="pv tp-r">-0.53%</span></div>
+    <div class="pill"><span class="pl">QQQ</span><span class="pv tp-r">-0.69%</span></div>
+    <div class="pill"><span class="pl">SENTIMENT</span><span class="pv">N/A</span></div>
+  </div>
+
+  <div class="chart-box"><svg viewBox="0 0 800 180" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style="width:100%;height:100px;display:block;"><defs><linearGradient id="cg_NVDA_4" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.4"/><stop offset="100%" stop-color="#8b5cf6" stop-opacity="0"/></linearGradient></defs><rect x="-7.9" y="148.0" width="15.7" height="32.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="8.8" y="168.8" width="15.7" height="11.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="25.5" y="170.7" width="15.7" height="9.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="42.1" y="173.2" width="15.7" height="6.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="58.8" y="169.8" width="15.7" height="10.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="75.5" y="171.3" width="15.7" height="8.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="92.1" y="172.2" width="15.7" height="7.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="108.8" y="172.5" width="15.7" height="7.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="125.5" y="172.9" width="15.7" height="7.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="142.1" y="174.0" width="15.7" height="6.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="158.8" y="174.3" width="15.7" height="5.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="175.5" y="172.5" width="15.7" height="7.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="192.1" y="174.9" width="15.7" height="5.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="208.8" y="174.2" width="15.7" height="5.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="225.5" y="174.8" width="15.7" height="5.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="242.1" y="173.9" width="15.7" height="6.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="258.8" y="174.1" width="15.7" height="5.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="275.5" y="176.0" width="15.7" height="4.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="292.1" y="174.9" width="15.7" height="5.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="308.8" y="176.1" width="15.7" height="3.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="325.5" y="176.5" width="15.7" height="3.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="342.1" y="176.0" width="15.7" height="4.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="358.8" y="174.4" width="15.7" height="5.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="375.5" y="175.3" width="15.7" height="4.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="392.1" y="175.4" width="15.7" height="4.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="408.8" y="175.1" width="15.7" height="4.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="425.5" y="176.5" width="15.7" height="3.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="442.1" y="177.2" width="15.7" height="2.8" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="458.8" y="177.3" width="15.7" height="2.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="475.5" y="177.3" width="15.7" height="2.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="492.1" y="176.8" width="15.7" height="3.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="508.8" y="177.8" width="15.7" height="2.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="525.5" y="177.6" width="15.7" height="2.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="542.1" y="176.8" width="15.7" height="3.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="558.8" y="177.7" width="15.7" height="2.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="575.5" y="177.1" width="15.7" height="2.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="592.1" y="177.3" width="15.7" height="2.7" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="608.8" y="176.7" width="15.7" height="3.3" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="625.5" y="177.1" width="15.7" height="2.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="642.1" y="176.9" width="15.7" height="3.1" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="658.8" y="176.8" width="15.7" height="3.2" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="675.5" y="178.4" width="15.7" height="1.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="692.1" y="178.0" width="15.7" height="2.0" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="708.8" y="176.5" width="15.7" height="3.5" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="725.5" y="177.4" width="15.7" height="2.6" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="742.1" y="177.6" width="15.7" height="2.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="758.8" y="176.6" width="15.7" height="3.4" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="775.5" y="175.1" width="15.7" height="4.9" fill="rgba(255,255,255,0.10)" rx="1"/><rect x="792.1" y="178.1" width="15.7" height="1.9" fill="rgba(255,255,255,0.10)" rx="1"/><path d="M 0.0 51.7 L 16.7,7.7 L 33.3,33.8 L 50.0,30.5 L 66.7,87.5 L 83.3,103.7 L 100.0,89.1 L 116.7,85.4 L 133.3,85.8 L 150.0,91.1 L 166.7,104.1 L 183.3,126.5 L 200.0,114.7 L 216.7,136.3 L 233.3,120.4 L 250.0,92.3 L 266.7,101.7 L 283.3,93.2 L 300.0,81.8 L 316.7,86.2 L 333.3,95.2 L 350.0,101.7 L 366.7,80.5 L 383.3,56.5 L 400.0,48.0 L 416.7,61.0 L 433.3,65.5 L 450.0,57.8 L 466.7,57.4 L 483.3,57.4 L 500.0,58.6 L 516.7,67.9 L 533.3,65.9 L 550.0,80.5 L 566.7,81.4 L 583.3,87.1 L 600.0,95.2 L 616.7,102.1 L 633.3,84.6 L 650.0,74.4 L 666.7,82.6 L 683.3,85.0 L 700.0,90.7 L 716.7,81.4 L 733.3,92.8 L 750.0,101.7 L 766.7,106.2 L 783.3,126.9 L 800.0,118.8 L 800.0,144 L 0.0,144 Z" fill="url(#cg_NVDA_4)" opacity="0.25"/><polyline points="0.0,51.7 16.7,47.6 33.3,46.0 50.0,44.7 66.7,48.8 83.3,54.1 100.0,57.4 116.7,59.8 133.3,62.2 150.0,65.1 166.7,68.7 183.3,74.4 200.0,78.1 216.7,83.8 233.3,87.1 250.0,87.9 266.7,89.1 283.3,89.5 300.0,88.7 316.7,88.7 333.3,89.1 350.0,90.3 366.7,89.5 383.3,86.2 400.0,82.6 416.7,80.5 433.3,79.3 450.0,77.3 466.7,75.3 483.3,73.6 500.0,72.0 516.7,71.6 533.3,71.2 550.0,72.0 566.7,72.8 583.3,74.4 600.0,76.1 616.7,78.5 633.3,79.3 650.0,78.9 666.7,79.3 683.3,79.7 700.0,81.0 716.7,81.0 733.3,81.8 750.0,83.8 766.7,85.8 783.3,89.9 800.0,92.8" fill="none" stroke="rgba(100,116,139,0.65)" stroke-width="1.2" stroke-dasharray="4,3" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/><polyline points="0.0,51.7 16.7,42.7 33.3,41.1 50.0,39.0 66.7,48.8 83.3,59.8 100.0,65.5 116.7,69.6 133.3,72.8 150.0,76.5 166.7,81.8 183.3,90.7 200.0,95.6 216.7,103.7 233.3,107.0 250.0,104.1 266.7,103.7 283.3,101.7 300.0,97.6 316.7,95.6 333.3,95.2 350.0,96.8 366.7,93.6 383.3,86.2 400.0,78.5 416.7,74.8 433.3,73.2 450.0,70.0 466.7,67.5 483.3,65.5 500.0,63.9 516.7,64.7 533.3,65.1 550.0,67.9 566.7,70.8 583.3,74.0 600.0,78.1 616.7,83.0 633.3,83.4 650.0,81.4 666.7,81.8 683.3,82.6 700.0,84.2 716.7,83.4 733.3,85.4 750.0,88.7 766.7,91.9 783.3,98.9 800.0,102.9" fill="none" stroke="rgba(96,165,250,0.80)" stroke-width="1.6" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/><polyline points="0.0,41.9 16.7,38.6 33.3,36.6 50.0,35.4 66.7,39.9 83.3,46.8 100.0,51.2 116.7,54.1 133.3,56.1 150.0,58.2 166.7,60.2 183.3,63.9 200.0,65.9 216.7,68.7 233.3,70.8 250.0,72.4 266.7,73.2 283.3,74.0 300.0,74.4 316.7,74.4 333.3,74.8 350.0,75.7 366.7,76.1 383.3,75.7 400.0,74.8 416.7,74.4 433.3,74.0 450.0,74.0 466.7,73.6 483.3,73.6 500.0,73.2 516.7,73.2 533.3,73.2 550.0,73.2 566.7,73.2 583.3,73.6 600.0,73.6 616.7,74.0 633.3,74.4 650.0,74.4 666.7,74.4 683.3,74.4 700.0,74.4 716.7,74.8 733.3,74.8 750.0,75.3 766.7,75.7 783.3,76.5 800.0,76.9" fill="none" stroke="rgba(251,191,36,0.90)" stroke-width="2.0" stroke-dasharray="5,3" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/><polyline points="0.0,51.7 16.7,7.7 33.3,33.8 50.0,30.5 66.7,87.5 83.3,103.7 100.0,89.1 116.7,85.4 133.3,85.8 150.0,91.1 166.7,104.1 183.3,126.5 200.0,114.7 216.7,136.3 233.3,120.4 250.0,92.3 266.7,101.7 283.3,93.2 300.0,81.8 316.7,86.2 333.3,95.2 350.0,101.7 366.7,80.5 383.3,56.5 400.0,48.0 416.7,61.0 433.3,65.5 450.0,57.8 466.7,57.4 483.3,57.4 500.0,58.6 516.7,67.9 533.3,65.9 550.0,80.5 566.7,81.4 583.3,87.1 600.0,95.2 616.7,102.1 633.3,84.6 650.0,74.4 666.7,82.6 683.3,85.0 700.0,90.7 716.7,81.4 733.3,92.8 750.0,101.7 766.7,106.2 783.3,126.9 800.0,118.8" fill="none" stroke="#8b5cf6" stroke-width="2.6" opacity="1.0" stroke-linejoin="round" stroke-linecap="round"/></svg><div class="chart-legend"><span class="cleg" style="color:#8b5cf6;">── Price</span><span class="cleg cleg-vwap">⋯ VWAP</span><span class="cleg cleg-ema9">── EMA9</span><span class="cleg cleg-ema20">── EMA20</span></div></div>
+
+  <div class="cat-box">
+    <div class="sec-lbl">Headline</div>
+    <div class="cat-text">Monitoring price action and volatility.</div>
+  </div>
+
+  <div class="checks-section">
+    <div class="sec-lbl">Long Qualification (Today data)</div>
+    <div class="checks-row"><span class="cbadge cbp">✓ Cap $4084B</span><span class="cbadge cbp">✓ ADV 176.9M</span><span class="cbadge cbp">✓ ATR 3.1%</span><span class="cbadge cbf">✗ P>VWAP $168.04>$169.07</span><span class="cbadge cbf">✗ RVOL 1.1x</span><span class="cbadge cbf">✗ EMAs↑ 9E:168 20E:169</span><span class="cbadge cbf">✗ RS↑ -1.0%</span><span class="cbadge cbp">✓ Runway 5.0%</span><span class="cbadge cbf">✗ R/R 1:0.0</span></div>
+  </div>
+
+  <div class="checks-section">
+    <div class="sec-lbl">Short Qualification (Today data)</div>
+    <div class="checks-row"><span class="cbadge cbp">✓ Cap $4084B</span><span class="cbadge cbp">✓ ADV 176.9M</span><span class="cbadge cbp">✓ ATR 3.1%</span><span class="cbadge cbp">✓ P<VWAP $168.04<169.07</span><span class="cbadge cbf">✗ RVOL 1.1x</span><span class="cbadge cbp">✓ EMAs↓ 9E:168 20E:169</span><span class="cbadge cbp">✓ RS↓ -1.0%</span><span class="cbadge cbf">✗ Downside 0.3%</span><span class="cbadge cbf">✗ R/R 1:0.5</span></div>
+  </div>
+</div>
+
+    <!-- ── How We Filter ───────────────────────────── -->
+    <div class="rules-wrap">
+      <div class="rules-title">How the Scanner Filters</div>
+      <div class="rules-sub">Every setup shown here has passed all four checks below. Here's what each check means in plain language — and the exact technical parameters behind it.</div>
+
+      <div class="rules-cols">
+        <!-- Shared -->
+        <div class="rule-card both-rc" style="grid-column:1/-1;">
+          <div class="rule-card-title">Step 1 — Large, Liquid, and Movable (applies to both Long &amp; Short)</div>
+          <div class="rule-item">
+            <div class="rule-plain">Only well-known, large companies — household names with deep trading markets.</div>
+            <div class="rule-tech">Market Cap &gt; $20,000,000,000</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Trades at least 2 million shares on an average day — liquid enough to get in and out cleanly.</div>
+            <div class="rule-tech">Average Daily Volume (3-month) &gt; 2,000,000 shares</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Moves enough each day to make trading it worthwhile — we skip stocks that barely budge.</div>
+            <div class="rule-tech">ATR(14) as % of price &ge; 1.5%</div>
+          </div>
+        </div>
+
+        <!-- Long -->
+        <div class="rule-card long-rc">
+          <div class="rule-card-title">▲ Long — Steps 2, 3 &amp; 4</div>
+          <div class="rule-item">
+            <div class="rule-plain">The stock is trading above its volume-weighted average price for today — buyers are in control.</div>
+            <div class="rule-tech">Price &gt; VWAP (intraday, 5-min)</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Unusually high trading activity right now — more than 1.2&times; its expected volume for this time of day.</div>
+            <div class="rule-tech">RVOL &gt; 1.2&times; (today's volume vs expected by time-of-day)</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Price is rising and holding above its short-term trend lines — momentum is intact.</div>
+            <div class="rule-tech">Price &gt; EMA(9) and Price &gt; EMA(20) on 5-min bars · No climax-volume spike</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Outpacing the broader market — it's leading, not just riding the tide.</div>
+            <div class="rule-tech">Ticker intraday return &gt; SPY return OR &gt; QQQ return</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">There's at least 1% of clear air between the current price and the nearest overhead resistance — room to run.</div>
+            <div class="rule-tech">Runway to resistance &ge; 1.0% · Risk/Reward &ge; 1:1.5 (stop = VWAP)</div>
+          </div>
+        </div>
+
+        <!-- Short -->
+        <div class="rule-card short-rc">
+          <div class="rule-card-title">▼ Short — Steps 2, 3 &amp; 4</div>
+          <div class="rule-item">
+            <div class="rule-plain">The stock is trading below its volume-weighted average price — sellers are in control.</div>
+            <div class="rule-tech">Price &lt; VWAP (intraday, 5-min)</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Unusually high activity confirms the move is real — not just a quiet drift lower.</div>
+            <div class="rule-tech">RVOL &gt; 1.2&times; (today's volume vs expected by time-of-day)</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Price is breaking down and sitting below its short-term trend lines — downward momentum is confirmed.</div>
+            <div class="rule-tech">Price &lt; EMA(9) and Price &lt; EMA(20) on 5-min bars · No climax-volume spike</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Lagging both major indices — it's weaker than the market, not just a sector rotation.</div>
+            <div class="rule-tech">Ticker return &lt; SPY return AND &lt; QQQ return</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">At least 1% of clear air between price and the next support level below — room to fall.</div>
+            <div class="rule-tech">Downside to support &ge; 1.0% · Risk/Reward &ge; 1:1.5 (stop = VWAP)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rule-card both-rc">
+        <div class="rule-card-title">Trade Plan Logic</div>
+        <div class="rule-item">
+          <div class="rule-plain">Entry: wait for the 9-EMA to hold (or break for shorts) with a volume expansion bar confirming the move.</div>
+          <div class="rule-tech">Entry trigger = 9-EMA hold/break + RVOL surge on next 5-min close</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-plain">Target: the nearest technically significant price level above (longs) or below (shorts).</div>
+          <div class="rule-tech">Target = nearest resistance (long) or support (short): Prev Day High/Low, 52-Wk High/Low, Pre-Mkt High/Low</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-plain">Stop: if price crosses back through the VWAP, the trade thesis is invalidated — exit immediately.</div>
+          <div class="rule-tech">Hard stop = VWAP cross (long: below VWAP · short: above VWAP)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Footer ──────────────────────────────────── -->
+    <div class="footer">
+      Page auto-refreshes every 5 minutes &nbsp;&middot;&nbsp;
+      Data: yfinance (free, ~2–5 min delay) + Alpha Vantage news<br>
+      <strong>For informational and research purposes only. Not financial advice. All trading involves substantial risk of loss.</strong>
+    </div>
+
   </div>
 </body>
 </html>
