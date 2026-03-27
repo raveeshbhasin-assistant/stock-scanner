@@ -32,7 +32,7 @@ import yfinance as yf
 from datetime import datetime
 import pytz
 
-# ─── CONFIG ───────────────────────────────────────────────────────────────────
+# ─── CONFIG ────────────────────────────────────────────────────────────────────────────────────────
 
 ALPHA_VANTAGE_KEY = os.environ.get('ALPHA_VANTAGE_KEY', '10M4I9CYR7SPPVSE')
 EST = pytz.timezone('US/Eastern')
@@ -80,7 +80,7 @@ LONG_CARD_COLORS = ['#00d4ff', '#00ff88', '#ffcc00', '#ff6b35', '#c77dff']
 SHORT_CARD_COLORS = ['#ff4444', '#ff6b6b', '#ff8c42', '#ff3fa4', '#c44dff']
 MONITOR_CARD_COLOR = '#8b5cf6'
 
-# ─── UNIVERSE ─────────────────────────────────────────────────────────────────
+# ─── UNIVERSE ────────────────────────────────────────────────────────────────────────────────────────
 
 FALLBACK_TICKERS = [
     'AAPL','MSFT','NVDA','AMZN','GOOGL','GOOG','META','TSLA','BRK-B',
@@ -131,7 +131,7 @@ def get_universe() -> list:
     return clean
 
 
-# ─── TIME SLOT DETECTION ──────────────────────────────────────────────────────
+# ─── TIME SLOT DETECTION ───────────────────────────────────────────────────────────────────────────────────
 
 def get_slot() -> str:
     """Return the name of the most recently triggered time slot."""
@@ -154,7 +154,7 @@ def get_slot() -> str:
     return current_slot
 
 
-# ─── TECHNICAL HELPERS ────────────────────────────────────────────────────────
+# ─── TECHNICAL HELPERS ──────────────────────────────────────────────────────────────────────────────────────────
 
 def ema(series: pd.Series, period: int) -> pd.Series:
     return series.ewm(span=period, adjust=False).mean()
@@ -256,10 +256,15 @@ def find_support(price: float,
         return None, None
 
     label = max(below, key=below.get)
+    return below[label], label= {k: v for k, v in candidates.items() if v < price * 0.999}
+    if not below:
+        return None, None
+
+    label = max(below, key=below.get)
     return below[label], label
 
 
-# ─── NEWS & SENTIMENT ────────────────────────────────────────────────────────
+# ─── NEWS & SENTIMENT ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
 _sentiment_cache: dict = {}
 
@@ -314,7 +319,7 @@ def get_sentiment(ticker: str) -> tuple:
         return None, ''
 
 
-# ─── DATA FETCHING ────────────────────────────────────────────────────────────
+# ─── DATA FETCHING ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
 def fetch_raw(ticker: str) -> dict | None:
     """
@@ -339,14 +344,18 @@ def fetch_raw(ticker: str) -> dict | None:
         session_active = len(intra) >= 6
         if not session_active:
             # Market is closed — fall back to most recent trading session
+            print(f"  [INFO] {ticker}: no live intraday data, fetching 5d fallback...")
             intra_5d = tk.history(period='5d', interval='5m', auto_adjust=True)
             if len(intra_5d) < 6:
+                print(f"  [WARN] {ticker}: 5d fallback also empty")
                 return None
             intra_5d.index = intra_5d.index.tz_convert(EST)
-            last_date = intra_5d.index[-1].date()
-            intra = intra_5d[intra_5d.index.date == last_date]
+            last_date = intra_5d.index[-1].strftime('%Y-%m-%d')
+            intra = intra_5d[intra_5d.index.strftime('%Y-%m-%d') == last_date]
             if len(intra) < 6:
+                print(f"  [WARN] {ticker}: filtered last-day slice too small ({len(intra)} bars)")
                 return None
+            print(f"  [INFO] {ticker}: using {last_date} session data ({len(intra)} bars)")
 
         # Pre/post market 1-min data (use 2d period to capture weekend AH data)
         prepost = None
@@ -437,10 +446,11 @@ def fetch_raw(ticker: str) -> dict | None:
         }
 
     except Exception as e:
+        print(f"  [ERROR] fetch_raw({ticker}): {type(e).__name__}: {e}")
         return None
 
 
-# ─── LONG SCANNER ─────────────────────────────────────────────────────────────
+# ─── LONG SCANNER ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 def scan_long(ticker: str, slot: str, spy_ret: float, qqq_ret: float) -> dict | None:
     """
@@ -563,7 +573,7 @@ def scan_long(ticker: str, slot: str, spy_ret: float, qqq_ret: float) -> dict | 
         return None
 
 
-# ─── SHORT SCANNER ────────────────────────────────────────────────────────────
+# ─── SHORT SCANNER ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 def scan_short(ticker: str, slot: str, spy_ret: float, qqq_ret: float) -> dict | None:
     """
@@ -685,7 +695,7 @@ def scan_short(ticker: str, slot: str, spy_ret: float, qqq_ret: float) -> dict |
         return None
 
 
-# ─── MONITOR FUNCTION ─────────────────────────────────────────────────────────
+# ─── MONITOR FUNCTION ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 def fetch_monitor(ticker: str, spy_ret: float, qqq_ret: float) -> dict | None:
     """
@@ -773,10 +783,11 @@ def fetch_monitor(ticker: str, spy_ret: float, qqq_ret: float) -> dict | None:
         }
 
     except Exception as e:
+        print(f"  [ERROR] fetch_monitor({ticker}): {type(e).__name__}: {e}")
         return None
 
 
-# ─── HTML GENERATOR ───────────────────────────────────────────────────────────
+# ─── HTML GENERATOR ────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 def _format_long_card(s: dict, color: str, spy_ret: float, qqq_ret: float) -> str:
     sent = f"{s['sentiment_pct']:.0f}% Positive" if s['sentiment_pct'] is not None else 'N/A'
@@ -841,7 +852,7 @@ def _format_long_card(s: dict, color: str, spy_ret: float, qqq_ret: float) -> st
     </div>
     <div class="trade-row last">
       <span class="tl">Hard Stop (VWAP)</span>
-      <span class="tv red">${s['stop']:.2f} &nbsp;(&minus;{s['risk_pct']:.1f}% risk &rarr; {rr_str} R/R)</span>
+      <span class="tv red">${s['stop']:.2f} &nbsp;(−{s['risk_pct']:.1f}% risk → {rr_str} R/R)</span>
     </div>
   </div>
 </div>"""
@@ -906,11 +917,11 @@ def _format_short_card(s: dict, color: str, spy_ret: float, qqq_ret: float) -> s
     </div>
     <div class="trade-row">
       <span class="tl">Target ({s['sup_label']})</span>
-      <span class="tv green">${s['support']:.2f} &nbsp;(&minus;{s['downside_pct']:.1f}% downside)</span>
+      <span class="tv green">${s['support']:.2f} &nbsp;(−{s['downside_pct']:.1f}% downside)</span>
     </div>
     <div class="trade-row last">
       <span class="tl">Hard Stop (VWAP)</span>
-      <span class="tv red">${s['stop']:.2f} &nbsp;(+{s['risk_pct']:.1f}% risk &rarr; {rr_str} R/R)</span>
+      <span class="tv red">${s['stop']:.2f} &nbsp;(+{s['risk_pct']:.1f}% risk → {rr_str} R/R)</span>
     </div>
   </div>
 </div>"""
@@ -1070,7 +1081,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="refresh" content="300">
-  <title>Trading Scanner &mdash; {slot_info['label']}</title>
+  <title>Trading Scanner — {slot_info['label']}</title>
   <style>
     *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
 
@@ -1083,7 +1094,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       min-height: 100vh;
     }}
 
-    /* ── Header ─────────────────────────────────────── */
+    /* ── Header ────────────────────────────────────────────────────────────────────────────────────────── */
     .header {{
       text-align: center;
       margin-bottom: 36px;
@@ -1130,10 +1141,10 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     }}
     .scan-meta .val {{ color: #e6edf3; }}
 
-    /* ── Container ──────────────────────────────────── */
+    /* ── Container ─────────────────────────────────────────────────────────────────────────────────────── */
     .container {{ max-width: 860px; margin: 0 auto; }}
 
-    /* ── Section Headers ────────────────────────────── */
+    /* ── Section Headers ───────────────────────────────────────────────────────────────────────────────────── */
     .section-header {{
       display: flex;
       align-items: center;
@@ -1173,7 +1184,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       letter-spacing: 0.5px;
     }}
 
-    /* ── Cards ──────────────────────────────────────── */
+    /* ── Cards ─────────────────────────────────────────────────────────────────────────────────────────────── */
     .card {{
       background: #0d1117;
       border: 1px solid #1c2030;
@@ -1208,7 +1219,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     .gap-down  {{ background: #2b0d0d; color: #ff6b6b; }}
     .neutral   {{ background: #1a1f2e; color: #8b949e; }}
 
-    /* ── Quals Row ───────────────────────────────────── */
+    /* ── Quals Row ──────────────────────────────────────────────────────────────────────────────────────────── */
     .quals-row {{
       background: #111827;
       border-radius: 6px;
@@ -1220,7 +1231,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       overflow-x: auto;
     }}
 
-    /* ── Metrics grid ────────────────────────────────── */
+    /* ── Metrics grid ───────────────────────────────────────────────────────────────────────────────────────── */
     .grid-2 {{
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1242,7 +1253,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     .val {{ font-size: 14px; color: #e6edf3; }}
     .val.hot {{ color: #ffcc00; }}
 
-    /* ── Catalyst ────────────────────────────────────── */
+    /* ── Catalyst ───────────────────────────────────────────────────────────────────────────────────────────── */
     .catalyst-box {{
       background: #111827;
       border-radius: 6px;
@@ -1263,7 +1274,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       line-height: 1.6;
     }}
 
-    /* ── Trade plan ─────────────────────────────────── */
+    /* ── Trade plan ─────────────────────────────────────────────────────────────────────────────────────────── */
     .trade-plan {{
       background: #080b10;
       border: 1px solid #1c2030;
@@ -1285,7 +1296,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     .green {{ color: #00ff88; }}
     .red   {{ color: #ff6b6b; }}
 
-    /* ── Checks section (monitors) ────────────────────── */
+    /* ── Checks section (monitors) ─────────────────────────────────────────────────────────────── */
     .checks-section {{
       background: #111827;
       border-radius: 6px;
@@ -1320,7 +1331,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       color: #ff6b6b;
     }}
 
-    /* ── No setups ───────────────────────────────────── */
+    /* ── No setups ───────────────────────────────────────────────────────────────────────────────────────── */
     .no-setups {{
       text-align: center;
       padding: 70px 20px;
@@ -1331,7 +1342,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     .no-msg  {{ font-size: 16px; color: #8b949e; margin-bottom: 8px; }}
     .no-sub  {{ font-size: 13px; color: #4b5563; }}
 
-    /* ── Footer ─────────────────────────────────────── */
+    /* ── Footer ──────────────────────────────────────────────────────────────────────────────────────────── */
     .footer {{
       text-align: center;
       margin-top: 48px;
@@ -1342,7 +1353,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       line-height: 1.8;
     }}
 
-    /* ── Mobile ─────────────────────────────────────── */
+    /* ── Mobile ──────────────────────────────────────────────────────────────────────────────────────────── */
     @media (max-width: 580px) {{
       .grid-2        {{ grid-template-columns: 1fr; }}
       .trade-row     {{ flex-direction: column; gap: 3px; }}
@@ -1366,7 +1377,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
 
     <div class="header">
       <div class="header-badge">Elite Day Trading Research</div>
-      <h1>&#9650; ▼ Momentum Scanner</h1>
+      <h1>▲ ▼ Momentum Scanner</h1>
       <div class="slot-label">{slot_info['label']}</div>
       <div class="focus-text">Focus: {slot_info['focus']}</div>
       <div class="scan-meta">
@@ -1381,14 +1392,14 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     <!-- LONG SETUPS SECTION -->
     <div class="section-header long">
       <span>▲ LONG SETUPS ({long_count} found)</span>
-      <span class="rules">Price&gt;VWAP · RVOL&gt;1.2x · Above 9/20-EMA · RS outperforms SPY or QQQ · Runway≥1% · R/R≥1:1.5</span>
+      <span class="rules">Price>VWAP · RVOL>1.2x · Above 9/20-EMA · RS outperforms SPY or QQQ · Runway≥1% · R/R≥1:1.5</span>
     </div>
     {long_cards}
 
     <!-- SHORT SETUPS SECTION -->
     <div class="section-header short">
       <span>▼ SHORT SETUPS ({short_count} found)</span>
-      <span class="rules">Price&lt;VWAP · RVOL&gt;1.2x · Below 9/20-EMA · RS underperforms SPY and QQQ · Downside≥1% · R/R≥1:1.5</span>
+      <span class="rules">Price<VWAP · RVOL>1.2x · Below 9/20-EMA · RS underperforms SPY and QQQ · Downside≥1% · R/R≥1:1.5</span>
     </div>
     {short_cards}
 
@@ -1401,8 +1412,8 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     <div class="footer">
       Page auto-refreshes every 5 minutes &nbsp;&bull;&nbsp;
       Powered by yfinance + Alpha Vantage &nbsp;&bull;&nbsp;
-      Rules: Cap&gt;$20B &middot; ADV&gt;2M &middot; ATR&ge;1.5% &middot; RVOL&gt;1.2x &middot; Runway&ge;1% &middot; R/R&ge;1:1.5<br>
-      <strong>For informational &amp; research purposes only. Not financial advice. All trading involves substantial risk of loss.</strong>
+      Rules: Cap>$20B · ADV>2M · ATR≥1.5% · RVOL>1.2x · Runway≥1% · R/R≥1:1.5<br>
+      <strong>For informational & research purposes only. Not financial advice. All trading involves substantial risk of loss.</strong>
     </div>
 
   </div>
@@ -1410,7 +1421,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
 </html>"""
 
 
-# ─── MAIN ─────────────────────────────────────────────────────────────────────
+# ─── MAIN ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 def main():
     est_now   = datetime.now(EST)
@@ -1424,7 +1435,7 @@ def main():
     print(f"  Focus     : {slot_info['focus']}")
     print(f"{'=' * 64}\n")
 
-    # ── SPY / QQQ baseline returns ─────────────────────────────────────────
+    # ── SPY / QQQ baseline returns ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
     spy_ret, qqq_ret = 0.0, 0.0
     for sym in ['SPY', 'QQQ']:
         try:
@@ -1440,11 +1451,11 @@ def main():
 
     print(f"  SPY: {spy_ret:+.2f}%   QQQ: {qqq_ret:+.2f}%\n")
 
-    # ── Load universe ──────────────────────────────────────────────────────
+    # ── Load universe ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     universe = get_universe()
     print(f"  Scanning {len(universe)} tickers...\n")
 
-    # ── Scan each ticker for LONG and SHORT ────────────────────────────────
+    # ── Scan each ticker for LONG and SHORT ─────────────────────────────────────────────────────────────────────────────────────────────────────────
     longs: list = []
     shorts: list = []
 
@@ -1483,7 +1494,7 @@ def main():
     print(f"  Scan complete — {len(longs)} long setup(s), {len(shorts)} short setup(s) found.")
     print(f"{'=' * 64}\n")
 
-    # ── Fetch monitor data for GOOGL and NVDA ─────────────────────────────
+    # ── Fetch monitor data for GOOGL and NVDA ──────────────────────────────────────────────────────────────────────────────────────────────────────
     monitors = []
     for ticker in MONITOR_TICKERS:
         print(f"  Fetching monitor data for {ticker}...")
@@ -1491,7 +1502,7 @@ def main():
         if monitor_data:
             monitors.append(monitor_data)
 
-    # ── Write HTML output ──────────────────────────────────────────────────
+    # ── Write HTML output ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
     html        = build_html(longs, shorts, monitors, slot, scan_time, spy_ret, qqq_ret)
     output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'index.html')
 
