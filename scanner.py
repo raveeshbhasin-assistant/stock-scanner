@@ -1446,6 +1446,15 @@ def main():
 
     print(f"  SPY: {spy_ret:+.2f}%   QQQ: {qqq_ret:+.2f}%\n")
 
+    # ── Fetch monitor data for GOOGL and NVDA (before main scan to avoid rate limits) ──
+    monitors = []
+    for ticker in MONITOR_TICKERS:
+        print(f"  Fetching monitor data for {ticker}...")
+        monitor_data = fetch_monitor(ticker, spy_ret, qqq_ret)
+        if monitor_data:
+            monitors.append(monitor_data)
+    time.sleep(2)  # brief pause before bulk scan
+
     # ── Load universe ──────────────────────────────────────────────────────
     universe = get_universe()
     print(f"  Scanning {len(universe)} tickers...\n")
@@ -1497,14 +1506,7 @@ def main():
         if monitor_data:
             monitors.append(monitor_data)
 
-    # ── Write HTML output ──────────────────────────────────────────────────
-    html        = build_html(longs, shorts, monitors, slot, scan_time, spy_ret, qqq_ret)
-    output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'index.html')
-
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write(html)
-
-    print(f"\n  ✓ index.html written ({len(html):,} bytes) → {output_path}\n")
+    # ── Write HTML output ────────────────────────────────────l):,} bytes) → {output_path}\n")
 
 
 if __name__ == '__main__':
