@@ -330,23 +330,23 @@ def fetch_raw(ticker: str) -> dict | None:
         adv = getattr(info, 'three_month_average_volume', None) or 0
 
         # Daily data
-        daily = tk.history(period="3mo", interval="1d", auto_adjust=True)
+        daily = tk.history(period='3mo', interval='1d', auto_adjust=True)
         if len(daily) < 15:
             return None
 
         # Intraday 5-min data
-        intra = tk.history(period="1d", interval="5m", auto_adjust=True)
+        intra = tk.history(period='1d', interval='5m', auto_adjust=True)
         session_active = len(intra) >= 6
         if not session_active:
             # Market is closed — fall back to most recent trading session
             print(f"  [INFO] {ticker}: no live intraday data, fetching 5d fallback...")
-            intra_5d = tk.history(period="5d", interval="5m", auto_adjust=True)
+            intra_5d = tk.history(period='5d', interval='5m', auto_adjust=True)
             if len(intra_5d) < 6:
                 print(f"  [WARN] {ticker}: 5d fallback also empty")
                 return None
             intra_5d.index = intra_5d.index.tz_convert(EST)
-            last_date = intra_5d.index[-1].strftime("%Y-%m-%d")
-            intra = intra_5d[intra_5d.index.strftime("%Y-%m-%d") == last_date]
+            last_date = intra_5d.index[-1].strftime('%Y-%m-%d')
+            intra = intra_5d[intra_5d.index.strftime('%Y-%m-%d') == last_date]
             if len(intra) < 2:
                 print(f"  [WARN] {ticker}: filtered last-day slice too small ({len(intra)} bars)")
                 return None
@@ -355,21 +355,21 @@ def fetch_raw(ticker: str) -> dict | None:
         # Pre/post market 1-min data (use 2d period to capture weekend AH data)
         prepost = None
         try:
-            prepost = tk.history(period="1d", interval="1m", prepost=True, auto_adjust=True)
+            prepost = tk.history(period='1d', interval='1m', prepost=True, auto_adjust=True)
             if prepost is not None and len(prepost) == 0:
-                prepost = tk.history(period="2d", interval="1m", prepost=True, auto_adjust=True)
+                prepost = tk.history(period='2d', interval='1m', prepost=True, auto_adjust=True)
             if prepost is not None and len(prepost) > 0:
                 prepost.index = prepost.index.tz_convert(EST)
         except Exception:
             pass
 
         # Calculate all metrics
-        price = float(intra["Close"].iloc[-1])
+        price = float(intra['Close'].iloc[-1])
         vwap = calc_vwap(intra)
         atr_pct = calc_atr_pct(daily)
         rvol = calc_rvol(intra, float(adv))
 
-        closes = intra["Close"]
+        closes = intra['Close']
         ema9_series = ema(closes, 9)
         ema20_series = ema(closes, 20)
         ema9 = float(ema9_series.iloc[-1])
@@ -377,24 +377,24 @@ def fetch_raw(ticker: str) -> dict | None:
 
         climax = is_climax_volume(intra)
 
-        prev_close = float(daily["Close"].iloc[-2]) if len(daily) >= 2 else price
+        prev_close = float(daily['Close'].iloc[-2]) if len(daily) >= 2 else price
         gap_pct = (price - prev_close) / prev_close * 100
 
-        first_price = float(intra["Close"].iloc[0])
+        first_price = float(intra['Close'].iloc[0])
         ticker_ret = (price - first_price) / first_price * 100
 
-        prev_day_high = float(daily["High"].iloc[-2]) if len(daily) >= 2 else price
-        prev_day_low = float(daily["Low"].iloc[-2]) if len(daily) >= 2 else price
-        week52_high = float(daily["High"].max())
-        week52_low = float(daily["Low"].min())
+        prev_day_high = float(daily['High'].iloc[-2]) if len(daily) >= 2 else price
+        prev_day_low = float(daily['Low'].iloc[-2]) if len(daily) >= 2 else price
+        week52_high = float(daily['High'].max())
+        week52_low = float(daily['Low'].min())
 
         premarket_high = None
         premarket_low = None
         if prepost is not None and len(prepost) > 0:
-            pm_only = prepost[prepost.index.time < pd.Timestamp("09:30").time()]
+            pm_only = prepost[prepost.index.time < pd.Timestamp('09:30').time()]
             if len(pm_only) > 0:
-                premarket_high = float(pm_only["High"].max())
-                premarket_low = float(pm_only["Low"].min())
+                premarket_high = float(pm_only['High'].max())
+                premarket_low = float(pm_only['Low'].min())
 
         resistance, res_label = find_resistance(price, prev_day_high, week52_high, premarket_high)
         support, sup_label = find_support(price, prev_day_low, week52_low, premarket_low)
@@ -411,6 +411,27 @@ def fetch_raw(ticker: str) -> dict | None:
             elif h < 9 or (h == 9 and m < 30):
                 ah_price = float(prepost['Close'].iloc[-1])
                 market_status = 'PRE-MKT'
+
+        # ── Chart data for inline SVG sparklines ──────────────────────────
+        try:
+            ci = intra.index
+            if hasattr(ci, 'tz_convert'):
+                ci = ci.tz_convert(EST)
+            chart_times  = [t.strftime('%H:%M') for t in ci]
+            chart_closes = [round(float(v), 2) for v in closes.tolist()]
+            tp_s         = (intra['High'] + intra['Low'] + intra['Close']) / 3
+            vwap_run     = (tp_s * intra['Volume']).cumsum() / intra['Volume'].cumsum()
+            chart_vwap   = [round(float(v), 2) for v in vwap_run.tolist()]
+            chart_ema9   = [round(float(v), 2) for v in ema9_series.tolist()]
+            chart_ema20  = [round(float(v), 2) for v in ema20_series.tolist()]
+            chart_volume = [int(v) for v in intra['Volume'].tolist()]
+            chart_data   = {
+                'times': chart_times, 'closes': chart_closes,
+                'vwap': chart_vwap, 'ema9': chart_ema9,
+                'ema20': chart_ema20, 'volume': chart_volume,
+            }
+        except Exception:
+            chart_data = {}
 
         return {
             'ticker': ticker,
@@ -438,6 +459,7 @@ def fetch_raw(ticker: str) -> dict | None:
             'session_active': session_active,
             'ah_price': ah_price,
             'market_status': market_status,
+            'chart_data': chart_data,
         }
 
     except Exception as e:
@@ -562,6 +584,7 @@ def scan_long(ticker: str, slot: str, spy_ret: float, qqq_ret: float) -> dict | 
             'headline': headline,
             'entry': entry_map.get(slot, f"Break above ${resistance:.2f}"),
             'setup_type': 'long',
+            'chart_data': data.get('chart_data', {}),
         }
 
     except Exception as e:
@@ -684,6 +707,7 @@ def scan_short(ticker: str, slot: str, spy_ret: float, qqq_ret: float) -> dict |
             'headline': headline,
             'entry': entry_map.get(slot, f"Break below ${support:.2f}"),
             'setup_type': 'short',
+            'chart_data': data.get('chart_data', {}),
         }
 
     except Exception as e:
@@ -775,6 +799,7 @@ def fetch_monitor(ticker: str, spy_ret: float, qqq_ret: float) -> dict | None:
             'session_active': data.get('session_active', True),
             'ah_price': data.get('ah_price'),
             'market_status': data.get('market_status', 'LIVE'),
+            'chart_data': data.get('chart_data', {}),
         }
 
     except Exception as e:
@@ -784,248 +809,366 @@ def fetch_monitor(ticker: str, spy_ret: float, qqq_ret: float) -> dict | None:
 
 # ─── HTML GENERATOR ───────────────────────────────────────────────────────────
 
+_svg_chart_id = 0
+
+
+def _render_chart_svg(chart_data: dict, accent_color: str, ticker: str) -> str:
+    """
+    Render a compact inline SVG sparkline: price + VWAP + EMA9 + EMA20 + volume bars.
+    Returns empty string if data is insufficient.
+    """
+    global _svg_chart_id
+    _svg_chart_id += 1
+    cid = f"cg_{ticker}_{_svg_chart_id}"
+
+    closes  = chart_data.get('closes', [])
+    vwap_s  = chart_data.get('vwap', [])
+    ema9_s  = chart_data.get('ema9', [])
+    ema20_s = chart_data.get('ema20', [])
+    volumes = chart_data.get('volume', [])
+
+    n = len(closes)
+    if n < 3:
+        return ''
+
+    W, H, VOL_H = 800, 180, 32
+    PRICE_H = H - VOL_H - 4
+
+    all_p = [v for series in [closes, vwap_s, ema9_s, ema20_s]
+             for v in series if isinstance(v, (int, float)) and v > 0]
+    if not all_p:
+        return ''
+    p_min, p_max = min(all_p), max(all_p)
+    p_range = max(p_max - p_min, p_max * 0.005)
+    p_min -= p_range * 0.06
+    p_max += p_range * 0.06
+    p_range = p_max - p_min
+
+    def sy(price):
+        return PRICE_H * (1 - (price - p_min) / p_range)
+
+    def sx(i):
+        return (i / (n - 1)) * W if n > 1 else W / 2
+
+    def polyline(series, stroke, sw, dash='', op=1.0):
+        pts = ' '.join(f"{sx(i):.1f},{sy(v):.1f}" for i, v in enumerate(series)
+                       if isinstance(v, (int, float)) and v > 0)
+        if pts.count(' ') < 1:
+            return ''
+        da = f' stroke-dasharray="{dash}"' if dash else ''
+        return (f'<polyline points="{pts}" fill="none" stroke="{stroke}" '
+                f'stroke-width="{sw}"{da} opacity="{op}" '
+                f'stroke-linejoin="round" stroke-linecap="round"/>')
+
+    # Price area fill
+    valid_closes = [(i, v) for i, v in enumerate(closes)
+                    if isinstance(v, (int, float)) and v > 0]
+    fill_path = ''
+    if len(valid_closes) >= 2:
+        pts_str = ' '.join(f"{sx(i):.1f},{sy(v):.1f}" for i, v in valid_closes)
+        x0, x1 = sx(valid_closes[0][0]), sx(valid_closes[-1][0])
+        fill_path = (f'<path d="M {pts_str.split()[0].replace(",", " ")} '
+                     f'L {" L ".join(pts_str.split()[1:])} '
+                     f'L {x1:.1f},{PRICE_H} L {x0:.1f},{PRICE_H} Z" '
+                     f'fill="url(#{cid})" opacity="0.25"/>')
+
+    # Volume bars
+    max_vol = max((v for v in volumes if isinstance(v, (int, float))), default=1) or 1
+    bw = max(0.8, W / n - 0.6)
+    vol_bars = ''.join(
+        f'<rect x="{sx(i) - bw/2:.1f}" y="{H - (v/max_vol)*VOL_H:.1f}" '
+        f'width="{bw:.1f}" height="{(v/max_vol)*VOL_H:.1f}" '
+        f'fill="rgba(255,255,255,0.10)" rx="1"/>'
+        for i, v in enumerate(volumes) if isinstance(v, (int, float)) and max_vol > 0
+    )
+
+    return (
+        f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" '
+        f'preserveAspectRatio="none" style="width:100%;height:100px;display:block;">'
+        f'<defs><linearGradient id="{cid}" x1="0" y1="0" x2="0" y2="1">'
+        f'<stop offset="0%" stop-color="{accent_color}" stop-opacity="0.4"/>'
+        f'<stop offset="100%" stop-color="{accent_color}" stop-opacity="0"/>'
+        f'</linearGradient></defs>'
+        f'{vol_bars}{fill_path}'
+        f'{polyline(ema20_s, "rgba(100,116,139,0.65)", 1.2, dash="4,3")}'
+        f'{polyline(ema9_s,  "rgba(96,165,250,0.80)", 1.6)}'
+        f'{polyline(vwap_s,  "rgba(251,191,36,0.90)", 2.0, dash="5,3")}'
+        f'{polyline(closes,  accent_color, 2.6)}'
+        f'</svg>'
+    )
+
+
+def _ticker_logo(ticker: str, color: str) -> str:
+    ini = ticker[:2]
+    return (
+        f'<div class="logo-wrap">'
+        f'<img src="https://financialmodelingprep.com/image-stock/{ticker}.png" '
+        f'class="logo-img" alt="{ticker}" '
+        f'onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';">'
+        f'<div class="logo-fallback" style="background:{color}1a;color:{color};">{ini}</div>'
+        f'</div>'
+    )
+
+
 def _format_long_card(s: dict, color: str, spy_ret: float, qqq_ret: float) -> str:
-    sent = f"{s['sentiment_pct']:.0f}% Positive" if s['sentiment_pct'] is not None else 'N/A'
-    rr_str = f"1:{s['rr']:.1f}"
-    gap_cls = 'gap-up' if s['gap_pct'] >= 0 else 'gap-down'
-    gap_sym = '▲' if s['gap_pct'] >= 0 else '▼'
-    hl = s['headline'] or 'Strong institutional momentum — no specific news catalyst identified.'
+    sent     = f"{s['sentiment_pct']:.0f}% Positive" if s['sentiment_pct'] is not None else 'N/A'
+    sent_col = ('#00d084' if (s['sentiment_pct'] or 0) >= 60
+                else ('#f59e0b' if (s['sentiment_pct'] or 0) >= 40 else '#ff4b5a')
+                if s['sentiment_pct'] is not None else 'rgba(240,242,247,0.3)')
+    rr_str   = f"1:{s['rr']:.1f}"
+    gap_cls  = 'badge-up' if s['gap_pct'] >= 0 else 'badge-dn'
+    gap_sym  = '▲' if s['gap_pct'] >= 0 else '▼'
+    hl       = s['headline'] or 'Strong institutional momentum — no specific news catalyst identified.'
+    chart    = _render_chart_svg(s.get('chart_data', {}), color, s['ticker'])
+    logo     = _ticker_logo(s['ticker'], color)
+    chart_block = (
+        f'<div class="chart-box">{chart}'
+        f'<div class="chart-legend">'
+        f'<span class="cleg" style="color:{color};">── Price</span>'
+        f'<span class="cleg cleg-vwap">⋯ VWAP</span>'
+        f'<span class="cleg cleg-ema9">── EMA9</span>'
+        f'<span class="cleg cleg-ema20">── EMA20</span>'
+        f'</div></div>'
+    ) if chart else ''
 
     return f"""
-<div class="card long-card" style="border-left-color:{color};">
-  <div class="card-header">
-    <span class="ticker" style="color:{color};">{s['ticker']}</span>
-    <span class="price">${s['price']:.2f}</span>
-    <span class="badge {gap_cls}">{gap_sym} {abs(s['gap_pct']):.2f}%</span>
-  </div>
-
-  <div class="quals-row">
-    Cap ${s['mkt_cap_b']:.0f}B | ADV {s['adv_m']:.1f}M | ATR {s['atr_pct']:.1f}% | RVOL {s['rvol']:.1f}x | RS {s['ticker_ret']:+.1f}% vs SPY {spy_ret:+.1f}% | Runway {s['runway_pct']:.1f}% | R/Q 1:{s['rr']:.1f}
-  </div>
-
-  <div class="grid-2">
-    <div class="metric">
-      <div class="lbl">Price / VWAP</div>
-      <div class="val">${s['price']:.2f} / ${s['vwap']:.2f}</div>
+<div class="card" style="--cc:{color};">
+  <div class="card-top">
+    {logo}
+    <div class="card-id">
+      <div class="card-ticker">{s['ticker']}</div>
+      <div class="card-dir long-dir">▲ LONG</div>
     </div>
-    <div class="metric">
-      <div class="lbl">Rel. Volume (RVOL)</div>
-      <div class="val hot">{s['rvol']:.2f}x normal</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">9-EMA / 20-EMA (5m)</div>
-      <div class="val">${s['ema9']:.2f} / ${s['ema20']:.2f}</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">ATR Volatility</div>
-      <div class="val">{s['atr_pct']:.2f}% of price</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Sentiment Score</div>
-      <div class="val">{sent}</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Strength vs Market</div>
-      <div class="val hot">{s['ticker_ret']:+.2f}% vs SPY {spy_ret:+.2f}%</div>
+    <div class="card-price-grp">
+      <div class="card-price">${s['price']:.2f}</div>
+      <span class="gbadge {gap_cls}">{gap_sym} {abs(s['gap_pct']):.2f}%</span>
     </div>
   </div>
 
-  <div class="catalyst-box">
-    <span class="section-lbl">THE CATALYST</span>
-    <p>{hl}</p>
+  <div class="tp-box">
+    <div class="tp-eyebrow">Trade Plan</div>
+    <div class="tp-row">
+      <span class="tp-icon ti-entry">➜</span>
+      <span class="tp-key">ENTER</span>
+      <span class="tp-val">{s['entry']}</span>
+    </div>
+    <div class="tp-row">
+      <span class="tp-icon ti-target">◎</span>
+      <span class="tp-key">TARGET</span>
+      <span class="tp-val tp-g">${s['resistance']:.2f} <span class="tp-muted">(+{s['runway_pct']:.1f}% · {s['res_label']})</span></span>
+    </div>
+    <div class="tp-row tp-last">
+      <span class="tp-icon ti-stop">✕</span>
+      <span class="tp-key">STOP</span>
+      <span class="tp-val tp-r">${s['stop']:.2f} VWAP <span class="tp-muted">(&minus;{s['risk_pct']:.1f}% risk · {rr_str} R/R)</span></span>
+    </div>
   </div>
 
-  <div class="trade-plan">
-    <span class="section-lbl">TRADE PLAN</span>
-    <div class="trade-row">
-      <span class="tl">Entry Trigger</span>
-      <span class="tv">{s['entry']}</span>
-    </div>
-    <div class="trade-row">
-      <span class="tl">Target ({s['res_label']})</span>
-      <span class="tv green">${s['resistance']:.2f} &nbsp;(+{s['runway_pct']:.1f}% runway)</span>
-    </div>
-    <div class="trade-row last">
-      <span class="tl">Hard Stop (VWAP)</span>
-      <span class="tv red">${s['stop']:.2f} &nbsp;(&minus;{s['risk_pct']:.1f}% risk &rarr; {rr_str} R/R)</span>
-    </div>
+  <div class="pills">
+    <div class="pill"><span class="pl">RVOL</span><span class="pv pv-hi">{s['rvol']:.1f}×</span></div>
+    <div class="pill"><span class="pl">RUNWAY</span><span class="pv">{s['runway_pct']:.1f}%</span></div>
+    <div class="pill"><span class="pl">R/R</span><span class="pv">{rr_str}</span></div>
+    <div class="pill"><span class="pl">RS vs SPY</span><span class="pv tp-g">{s['ticker_ret']:+.1f}%</span></div>
+    <div class="pill"><span class="pl">VWAP</span><span class="pv">${s['vwap']:.2f}</span></div>
+    <div class="pill"><span class="pl">EMA9</span><span class="pv">${s['ema9']:.2f}</span></div>
+    <div class="pill"><span class="pl">EMA20</span><span class="pv">${s['ema20']:.2f}</span></div>
+    <div class="pill"><span class="pl">ATR</span><span class="pv">{s['atr_pct']:.1f}%</span></div>
+    <div class="pill"><span class="pl">CAP</span><span class="pv">${s['mkt_cap_b']:.0f}B</span></div>
+    <div class="pill"><span class="pl">SENTIMENT</span><span class="pv" style="color:{sent_col};">{sent}</span></div>
+  </div>
+
+  {chart_block}
+
+  <div class="cat-box">
+    <div class="sec-lbl">Catalyst</div>
+    <div class="cat-text">{hl}</div>
   </div>
 </div>"""
 
 
 def _format_short_card(s: dict, color: str, spy_ret: float, qqq_ret: float) -> str:
-    sent = f"{s['sentiment_pct']:.0f}% Positive" if s['sentiment_pct'] is not None else 'N/A'
-    rr_str = f"1:{s['rr']:.1f}"
-    gap_cls = 'gap-up' if s['gap_pct'] >= 0 else 'gap-down'
-    gap_sym = '▲' if s['gap_pct'] >= 0 else '▼'
-    hl = s['headline'] or 'Institutional selling pressure — no specific news catalyst identified.'
+    sent     = f"{s['sentiment_pct']:.0f}% Positive" if s['sentiment_pct'] is not None else 'N/A'
+    sent_col = ('#00d084' if (s['sentiment_pct'] or 0) >= 60
+                else ('#f59e0b' if (s['sentiment_pct'] or 0) >= 40 else '#ff4b5a')
+                if s['sentiment_pct'] is not None else 'rgba(240,242,247,0.3)')
+    rr_str   = f"1:{s['rr']:.1f}"
+    gap_cls  = 'badge-up' if s['gap_pct'] >= 0 else 'badge-dn'
+    gap_sym  = '▲' if s['gap_pct'] >= 0 else '▼'
+    hl       = s['headline'] or 'Institutional selling pressure — no specific news catalyst identified.'
+    chart    = _render_chart_svg(s.get('chart_data', {}), color, s['ticker'])
+    logo     = _ticker_logo(s['ticker'], color)
+    chart_block = (
+        f'<div class="chart-box">{chart}'
+        f'<div class="chart-legend">'
+        f'<span class="cleg" style="color:{color};">── Price</span>'
+        f'<span class="cleg cleg-vwap">⋯ VWAP</span>'
+        f'<span class="cleg cleg-ema9">── EMA9</span>'
+        f'<span class="cleg cleg-ema20">── EMA20</span>'
+        f'</div></div>'
+    ) if chart else ''
 
     return f"""
-<div class="card short-card" style="border-left-color:{color};">
-  <div class="card-header">
-    <span class="ticker" style="color:{color};">{s['ticker']}</span>
-    <span class="price">${s['price']:.2f}</span>
-    <span class="badge {gap_cls}">{gap_sym} {abs(s['gap_pct']):.2f}%</span>
-  </div>
-
-  <div class="quals-row">
-    Cap ${s['mkt_cap_b']:.0f}B | ADV {s['adv_m']:.1f}M | ATR {s['atr_pct']:.1f}% | RVOL {s['rvol']:.1f}x | RS {s['ticker_ret']:+.1f}% vs SPY {spy_ret:+.1f}% | Downside {s['downside_pct']:.1f}% | R/R 1:{s['rr']:.1f}
-  </div>
-
-  <div class="grid-2">
-    <div class="metric">
-      <div class="lbl">Price / VWAP</div>
-      <div class="val">${s['price']:.2f} / ${s['vwap']:.2f}</div>
+<div class="card" style="--cc:{color};">
+  <div class="card-top">
+    {logo}
+    <div class="card-id">
+      <div class="card-ticker">{s['ticker']}</div>
+      <div class="card-dir short-dir">▼ SHORT</div>
     </div>
-    <div class="metric">
-      <div class="lbl">Rel. Volume (RVOL)</div>
-      <div class="val hot">{s['rvol']:.2f}x normal</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">9-EMA / 20-EMA (5m)</div>
-      <div class="val">${s['ema9']:.2f} / ${s['ema20']:.2f}</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">ATR Volatility</div>
-      <div class="val">{s['atr_pct']:.2f}% of price</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Sentiment Score</div>
-      <div class="val">{sent}</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Weakness vs Market</div>
-      <div class="val hot">{s['ticker_ret']:+.2f}% vs SPY {spy_ret:+.2f}%</div>
+    <div class="card-price-grp">
+      <div class="card-price">${s['price']:.2f}</div>
+      <span class="gbadge {gap_cls}">{gap_sym} {abs(s['gap_pct']):.2f}%</span>
     </div>
   </div>
 
-  <div class="catalyst-box">
-    <span class="section-lbl">THE CATALYST</span>
-    <p>{hl}</p>
+  <div class="tp-box">
+    <div class="tp-eyebrow">Trade Plan</div>
+    <div class="tp-row">
+      <span class="tp-icon ti-entry">➜</span>
+      <span class="tp-key">ENTER</span>
+      <span class="tp-val">{s['entry']}</span>
+    </div>
+    <div class="tp-row">
+      <span class="tp-icon ti-target">◎</span>
+      <span class="tp-key">TARGET</span>
+      <span class="tp-val tp-g">${s['support']:.2f} <span class="tp-muted">(&minus;{s['downside_pct']:.1f}% · {s['sup_label']})</span></span>
+    </div>
+    <div class="tp-row tp-last">
+      <span class="tp-icon ti-stop">✕</span>
+      <span class="tp-key">STOP</span>
+      <span class="tp-val tp-r">${s['stop']:.2f} VWAP <span class="tp-muted">(+{s['risk_pct']:.1f}% risk · {rr_str} R/R)</span></span>
+    </div>
   </div>
 
-  <div class="trade-plan">
-    <span class="section-lbl">TRADE PLAN</span>
-    <div class="trade-row">
-      <span class="tl">Entry Trigger</span>
-      <span class="tv">{s['entry']}</span>
-    </div>
-    <div class="trade-row">
-      <span class="tl">Target ({s['sup_label']})</span>
-      <span class="tv green">${s['support']:.2f} &nbsp;(&minus;{s['downside_pct']:.1f}% downside)</span>
-    </div>
-    <div class="trade-row last">
-      <span class="tl">Hard Stop (VWAP)</span>
-      <span class="tv red">${s['stop']:.2f} &nbsp;(+{s['risk_pct']:.1f}% risk &rarr; {rr_str} R/R)</span>
-    </div>
+  <div class="pills">
+    <div class="pill"><span class="pl">RVOL</span><span class="pv pv-hi">{s['rvol']:.1f}×</span></div>
+    <div class="pill"><span class="pl">DOWNSIDE</span><span class="pv">{s['downside_pct']:.1f}%</span></div>
+    <div class="pill"><span class="pl">R/R</span><span class="pv">{rr_str}</span></div>
+    <div class="pill"><span class="pl">RS vs SPY</span><span class="pv tp-r">{s['ticker_ret']:+.1f}%</span></div>
+    <div class="pill"><span class="pl">VWAP</span><span class="pv">${s['vwap']:.2f}</span></div>
+    <div class="pill"><span class="pl">EMA9</span><span class="pv">${s['ema9']:.2f}</span></div>
+    <div class="pill"><span class="pl">EMA20</span><span class="pv">${s['ema20']:.2f}</span></div>
+    <div class="pill"><span class="pl">ATR</span><span class="pv">{s['atr_pct']:.1f}%</span></div>
+    <div class="pill"><span class="pl">CAP</span><span class="pv">${s['mkt_cap_b']:.0f}B</span></div>
+    <div class="pill"><span class="pl">SENTIMENT</span><span class="pv" style="color:{sent_col};">{sent}</span></div>
+  </div>
+
+  {chart_block}
+
+  <div class="cat-box">
+    <div class="sec-lbl">Catalyst</div>
+    <div class="cat-text">{hl}</div>
   </div>
 </div>"""
 
 
 def _format_monitor_card(m: dict, spy_ret: float, qqq_ret: float) -> str:
-    gap_cls = 'gap-up' if m['gap_pct'] >= 0 else 'gap-down'
-    gap_sym = '▲' if m['gap_pct'] >= 0 else '▼'
-    hl = m['headline'] or 'Monitoring price action and volatility.'
-    sent = f"{m['sentiment_pct']:.0f}% Positive" if m['sentiment_pct'] is not None else 'N/A'
-
-    market_status = m.get('market_status', 'LIVE')
-    ah_price = m.get('ah_price')
+    color          = MONITOR_CARD_COLOR
+    gap_cls        = 'badge-up' if m['gap_pct'] >= 0 else 'badge-dn'
+    gap_sym        = '▲' if m['gap_pct'] >= 0 else '▼'
+    hl             = m['headline'] or 'Monitoring price action and volatility.'
+    sent           = f"{m['sentiment_pct']:.0f}% Positive" if m['sentiment_pct'] is not None else 'N/A'
+    market_status  = m.get('market_status', 'LIVE')
+    ah_price       = m.get('ah_price')
     session_active = m.get('session_active', True)
 
-    # Market status badge styling
-    status_colors = {
-        'LIVE':       ('#00ff88', '#003318'),
-        'AFTER HRS':  ('#f4a261', '#2d1a08'),
-        'PRE-MKT':    ('#58a6ff', '#0b1e35'),
-        'PREV CLOSE': ('#8b949e', '#161b22'),
+    status_map = {
+        'LIVE':       ('#00d084', 'rgba(0,208,132,0.12)'),
+        'AFTER HRS':  ('#f59e0b', 'rgba(245,158,11,0.12)'),
+        'PRE-MKT':    ('#60a5fa', 'rgba(96,165,250,0.12)'),
+        'PREV CLOSE': ('rgba(240,242,247,0.35)', 'rgba(255,255,255,0.06)'),
     }
-    status_fg, status_bg = status_colors.get(market_status, ('#8b949e', '#161b22'))
+    st_fg, st_bg = status_map.get(market_status, ('rgba(240,242,247,0.35)', 'rgba(255,255,255,0.06)'))
     status_badge = (
-        f'<span style="background:{status_bg};color:{status_fg};border:1px solid {status_fg}44;'
-        f'border-radius:4px;padding:2px 8px;font-size:10px;letter-spacing:1px;">'
+        f'<span style="background:{st_bg};color:{st_fg};border:1px solid {st_fg};'
+        f'border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:1px;">'
         f'{market_status}</span>'
     )
 
-    # Price display — show AH/PM price when available, last-session close otherwise
     if ah_price is not None:
         display_price = ah_price
-        price_label = 'Extended Hrs Price'
+        price_label   = 'Extended Hrs Price'
         session_label = 'Extended Hrs'
     elif not session_active:
         display_price = m['price']
-        price_label = 'Last Session Close'
+        price_label   = 'Last Session Close'
         session_label = 'Last Session'
     else:
         display_price = m['price']
-        price_label = 'Current Price'
+        price_label   = 'Current Price'
         session_label = 'Today'
 
-    ah_row = ''
+    ah_pill = ''
     if ah_price is not None:
-        ah_chg = (ah_price - m['price']) / m['price'] * 100
-        ah_cls = 'hot' if ah_chg >= 0 else ''
+        ah_chg  = (ah_price - m['price']) / m['price'] * 100
+        ah_col  = '#00d084' if ah_chg >= 0 else '#ff4b5a'
         ah_sign = '+' if ah_chg >= 0 else ''
-        ah_row = f"""
-    <div class="metric">
-      <div class="lbl">Last Session Close</div>
-      <div class="val">${m['price']:.2f}</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Extended Hrs Change</div>
-      <div class="val {ah_cls}">{ah_sign}{ah_chg:.2f}%</div>
-    </div>"""
+        ah_pill = (f'<div class="pill"><span class="pl">PREV CLOSE</span>'
+                   f'<span class="pv">${m["price"]:.2f}</span></div>'
+                   f'<div class="pill"><span class="pl">EXT HRS CHG</span>'
+                   f'<span class="pv" style="color:{ah_col};">{ah_sign}{ah_chg:.2f}%</span></div>')
 
-    long_badges = ''
-    for label, actual, threshold, passes in m['long_checks']:
-        badge_class = 'check-pass' if passes else 'check-fail'
-        long_badges += f'<span class="check-badge {badge_class}">{"✓" if passes else "✗"} {label} {actual}</span>'
+    long_badges = ''.join(
+        f'<span class="cbadge {"cbp" if passes else "cbf"}">{"✓" if passes else "✗"} {label} {actual}</span>'
+        for label, actual, threshold, passes in m['long_checks']
+    )
+    short_badges = ''.join(
+        f'<span class="cbadge {"cbp" if passes else "cbf"}">{"✓" if passes else "✗"} {label} {actual}</span>'
+        for label, actual, threshold, passes in m['short_checks']
+    )
 
-    short_badges = ''
-    for label, actual, threshold, passes in m['short_checks']:
-        badge_class = 'check-pass' if passes else 'check-fail'
-        short_badges += f'<span class="check-badge {badge_class}">{"✓" if passes else "✗"} {label} {actual}</span>'
+    chart    = _render_chart_svg(m.get('chart_data', {}), color, m['ticker'])
+    logo     = _ticker_logo(m['ticker'], color)
+    chart_block = (
+        f'<div class="chart-box">{chart}'
+        f'<div class="chart-legend">'
+        f'<span class="cleg" style="color:{color};">── Price</span>'
+        f'<span class="cleg cleg-vwap">⋯ VWAP</span>'
+        f'<span class="cleg cleg-ema9">── EMA9</span>'
+        f'<span class="cleg cleg-ema20">── EMA20</span>'
+        f'</div></div>'
+    ) if chart else ''
 
     return f"""
-<div class="card monitor-card" style="border-left-color:{MONITOR_CARD_COLOR};">
-  <div class="card-header">
-    <span class="ticker" style="color:{MONITOR_CARD_COLOR};">{m['ticker']}</span>
-    <span class="price">${display_price:.2f}</span>
-    <span class="badge {gap_cls}">{gap_sym} {abs(m['gap_pct']):.2f}%</span>
-    <span class="badge neutral">{m['ticker_ret']:+.2f}% {session_label}</span>
-    {status_badge}
-  </div>
-
-  <div class="grid-2">
-    <div class="metric">
-      <div class="lbl">{price_label}</div>
-      <div class="val">${display_price:.2f}</div>
+<div class="card" style="--cc:{color};">
+  <div class="card-top">
+    {logo}
+    <div class="card-id">
+      <div class="card-ticker">{m['ticker']}</div>
+      <div class="card-dir monitor-dir">◉ MONITOR</div>
     </div>
-    <div class="metric">
-      <div class="lbl">{session_label} Return</div>
-      <div class="val hot">{m['ticker_ret']:+.2f}%</div>
-    </div>{ah_row}
-    <div class="metric">
-      <div class="lbl">Sentiment</div>
-      <div class="val">{sent}</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Market Context</div>
-      <div class="val">SPY {spy_ret:+.2f}% | QQQ {qqq_ret:+.2f}%</div>
+    <div class="card-price-grp">
+      <div class="card-price">${display_price:.2f}</div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap;">
+        <span class="gbadge {gap_cls}">{gap_sym} {abs(m['gap_pct']):.2f}%</span>
+        {status_badge}
+      </div>
     </div>
   </div>
 
-  <div class="catalyst-box">
-    <span class="section-lbl">HEADLINE</span>
-    <p>{hl}</p>
+  <div class="pills">
+    <div class="pill"><span class="pl">{price_label.upper()}</span><span class="pv">${display_price:.2f}</span></div>
+    <div class="pill"><span class="pl">{session_label.upper()} RETURN</span><span class="pv {'tp-g' if m['ticker_ret'] >= 0 else 'tp-r'}">{m['ticker_ret']:+.2f}%</span></div>
+    {ah_pill}
+    <div class="pill"><span class="pl">SPY</span><span class="pv {'tp-g' if spy_ret >= 0 else 'tp-r'}">{spy_ret:+.2f}%</span></div>
+    <div class="pill"><span class="pl">QQQ</span><span class="pv {'tp-g' if qqq_ret >= 0 else 'tp-r'}">{qqq_ret:+.2f}%</span></div>
+    <div class="pill"><span class="pl">SENTIMENT</span><span class="pv">{sent}</span></div>
+  </div>
+
+  {chart_block}
+
+  <div class="cat-box">
+    <div class="sec-lbl">Headline</div>
+    <div class="cat-text">{hl}</div>
   </div>
 
   <div class="checks-section">
-    <div class="checks-label">LONG Qualification ({session_label} data)</div>
+    <div class="sec-lbl">Long Qualification ({session_label} data)</div>
     <div class="checks-row">{long_badges}</div>
   </div>
 
   <div class="checks-section">
-    <div class="checks-label">SHORT Qualification ({session_label} data)</div>
+    <div class="sec-lbl">Short Qualification ({session_label} data)</div>
     <div class="checks-row">{short_badges}</div>
   </div>
 </div>"""
@@ -1033,8 +1176,8 @@ def _format_monitor_card(m: dict, spy_ret: float, qqq_ret: float) -> str:
 
 def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: str,
                spy_ret: float, qqq_ret: float) -> str:
-    slot_info = TIME_SLOTS[slot]
-    long_count = len(longs)
+    slot_info   = TIME_SLOTS[slot]
+    long_count  = len(longs)
     short_count = len(shorts)
 
     long_cards = ''.join(
@@ -1044,9 +1187,9 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     if not long_cards:
         long_cards = """
 <div class="no-setups">
-  <div class="no-icon">&#9888;</div>
-  <div class="no-msg">No long setups meet the criteria.</div>
-  <div class="no-sub">Capital preservation is the priority.</div>
+  <div class="no-icon">&#9650;</div>
+  <div class="no-msg">No long setups pass the filter right now.</div>
+  <div class="no-sub">Capital preservation is a valid position.</div>
 </div>"""
 
     short_cards = ''.join(
@@ -1056,19 +1199,18 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     if not short_cards:
         short_cards = """
 <div class="no-setups">
-  <div class="no-icon">&#9888;</div>
-  <div class="no-msg">No short setups meet the criteria.</div>
-  <div class="no-sub">Capital preservation is the priority.</div>
+  <div class="no-icon">&#9660;</div>
+  <div class="no-msg">No short setups pass the filter right now.</div>
+  <div class="no-sub">Capital preservation is a valid position.</div>
 </div>"""
 
     monitor_cards = ''.join(
         _format_monitor_card(m, spy_ret, qqq_ret)
-        for m in monitors
-        if m is not None
+        for m in monitors if m is not None
     )
 
-    spy_color = '#00ff88' if spy_ret >= 0 else '#ff6b6b'
-    qqq_color = '#00ff88' if qqq_ret >= 0 else '#ff6b6b'
+    spy_col = '#00d084' if spy_ret >= 0 else '#ff4b5a'
+    qqq_col = '#00d084' if qqq_ret >= 0 else '#ff4b5a'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -1076,339 +1218,547 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="refresh" content="300">
-  <title>Trading Scanner &mdash; {slot_info['label']}</title>
+  <title>Momentum Scanner &mdash; {slot_info['label']}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    /* ── Reset ──────────────────────────────── */
     *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
-
+    :root {{
+      --bg:      #07090e;
+      --s1:      #0d1018;
+      --s2:      #141820;
+      --s3:      #1b2130;
+      --border:  rgba(255,255,255,0.06);
+      --t1:      #f0f2f7;
+      --t2:      rgba(240,242,247,0.55);
+      --t3:      rgba(240,242,247,0.28);
+      --green:   #00d084;
+      --red:     #ff4b5a;
+      --amber:   #f59e0b;
+      --blue:    #60a5fa;
+      --purple:  #a78bfa;
+      --r:       12px;
+      --r-sm:    8px;
+    }}
     body {{
-      background: #080b10;
-      color: #c9d1d9;
-      font-family: 'Courier New', 'Consolas', monospace;
+      background: var(--bg);
+      color: var(--t1);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 14px;
-      padding: 24px 16px 48px;
-      min-height: 100vh;
+      line-height: 1.5;
+      padding: 0 16px 100px;
+      -webkit-font-smoothing: antialiased;
     }}
 
-    /* ── Header ─────────────────────────────────────── */
-    .header {{
+    /* ── Layout ─────────────────────────────── */
+    .wrap {{ max-width: 920px; margin: 0 auto; }}
+
+    /* ── Page Header ────────────────────────── */
+    .pg-header {{
       text-align: center;
-      margin-bottom: 36px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid #1c2030;
+      padding: 52px 0 40px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 52px;
     }}
-    .header-badge {{
-      display: inline-block;
-      background: #111827;
-      border: 1px solid #2a3042;
-      border-radius: 20px;
-      padding: 4px 14px;
+    .pg-eyebrow {{
       font-size: 10px;
-      color: #6b7280;
-      letter-spacing: 2px;
+      font-weight: 700;
+      letter-spacing: 3px;
       text-transform: uppercase;
-      margin-bottom: 12px;
+      color: var(--t3);
+      margin-bottom: 18px;
     }}
-    h1 {{
-      font-size: 26px;
-      font-weight: bold;
-      color: #e6edf3;
-      letter-spacing: 1px;
+    .pg-title {{
+      font-size: 38px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      color: var(--t1);
+      margin-bottom: 10px;
+    }}
+    .pg-slot {{
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--blue);
       margin-bottom: 6px;
     }}
-    .slot-label {{
-      font-size: 14px;
-      color: #58a6ff;
-      margin-bottom: 4px;
-    }}
-    .focus-text {{
-      font-size: 12px;
-      color: #6b7280;
+    .pg-focus {{
+      font-size: 13px;
+      color: var(--t2);
       font-style: italic;
-      margin-bottom: 14px;
+      margin-bottom: 30px;
     }}
-    .scan-meta {{
+    .pg-meta {{
       display: flex;
-      flex-wrap: wrap;
       justify-content: center;
-      gap: 20px;
-      font-size: 12px;
-      color: #6b7280;
+      flex-wrap: wrap;
+      gap: 28px;
     }}
-    .scan-meta .val {{ color: #e6edf3; }}
+    .meta-item {{ font-size: 13px; color: var(--t2); }}
+    .meta-val  {{ font-weight: 600; color: var(--t1); }}
 
-    /* ── Container ──────────────────────────────────── */
-    .container {{ max-width: 860px; margin: 0 auto; }}
-
-    /* ── Section Headers ────────────────────────────── */
-    .section-header {{
+    /* ── Section Heads ──────────────────────── */
+    .sec-head {{
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-top: 42px;
-      margin-bottom: 20px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid #1c2030;
-      font-size: 14px;
-      font-weight: bold;
-      color: #e6edf3;
-      letter-spacing: 1px;
-    }}
-    .section-header.long {{
-      color: #00ff88;
-      border-bottom-color: #00ff88;
-    }}
-    .section-header.short {{
-      color: #ff6b6b;
-      border-bottom-color: #ff6b6b;
-    }}
-    .section-header.monitor {{
-      color: #8b5cf6;
-      border-bottom-color: #8b5cf6;
-    }}
-    .section-header .count {{
-      background: rgba(255, 255, 255, 0.1);
-      padding: 3px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-    }}
-    .section-header .rules {{
-      margin-left: auto;
-      font-size: 11px;
-      color: #8b949e;
-      font-weight: normal;
-      letter-spacing: 0.5px;
-    }}
-
-    /* ── Cards ──────────────────────────────────────── */
-    .card {{
-      background: #0d1117;
-      border: 1px solid #1c2030;
-      border-left: 4px solid #00d4ff;
-      border-radius: 8px;
-      padding: 22px 20px;
+      gap: 14px;
+      margin-top: 60px;
       margin-bottom: 24px;
     }}
-    .card-header {{
+    .sec-head-title {{
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }}
+    .sec-head-count {{
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 13px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--t2);
+    }}
+    .sec-head-line {{ flex: 1; height: 1px; background: var(--border); }}
+    .sec-head.long    .sec-head-title {{ color: var(--green);  }}
+    .sec-head.short   .sec-head-title {{ color: var(--red);    }}
+    .sec-head.monitor .sec-head-title {{ color: var(--purple); }}
+
+    /* ── Cards ──────────────────────────────── */
+    .card {{
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-top: 2.5px solid var(--cc, var(--blue));
+      border-radius: var(--r);
+      padding: 24px;
+      margin-bottom: 20px;
+    }}
+
+    /* ── Card top row ───────────────────────── */
+    .card-top {{
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: 14px;
+      margin-bottom: 20px;
     }}
-    .ticker {{
-      font-size: 28px;
-      font-weight: bold;
-      letter-spacing: 1.5px;
-    }}
-    .price {{
-      font-size: 22px;
-      color: #e6edf3;
-    }}
-    .badge {{
-      padding: 3px 10px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: bold;
-    }}
-    .gap-up    {{ background: #0d2b1a; color: #00ff88; }}
-    .gap-down  {{ background: #2b0d0d; color: #ff6b6b; }}
-    .neutral   {{ background: #1a1f2e; color: #8b949e; }}
-
-    /* ── Quals Row ───────────────────────────────────── */
-    .quals-row {{
-      background: #111827;
-      border-radius: 6px;
-      padding: 10px 12px;
-      margin-bottom: 16px;
-      font-size: 11px;
-      color: #8b949e;
-      line-height: 1.5;
-      overflow-x: auto;
-    }}
-
-    /* ── Metrics grid ────────────────────────────────── */
-    .grid-2 {{
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 16px;
-    }}
-    .metric {{
-      background: #111827;
-      border-radius: 6px;
-      padding: 10px 12px;
-    }}
-    .lbl {{
-      font-size: 9px;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-bottom: 5px;
-    }}
-    .val {{ font-size: 14px; color: #e6edf3; }}
-    .val.hot {{ color: #ffcc00; }}
-
-    /* ── Catalyst ────────────────────────────────────── */
-    .catalyst-box {{
-      background: #111827;
-      border-radius: 6px;
-      padding: 12px 14px;
-      margin-bottom: 14px;
-    }}
-    .section-lbl {{
+    .logo-wrap {{ width: 42px; height: 42px; flex-shrink: 0; position: relative; }}
+    .logo-img  {{
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      object-fit: contain;
+      background: #fff;
       display: block;
-      font-size: 9px;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 7px;
     }}
-    .catalyst-box p {{
+    .logo-fallback {{
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      align-items: center;
+      justify-content: center;
       font-size: 13px;
-      color: #c9d1d9;
-      line-height: 1.6;
+      font-weight: 700;
+      letter-spacing: 0.5px;
     }}
+    .card-id {{ flex: 1; min-width: 0; }}
+    .card-ticker {{
+      font-size: 27px;
+      font-weight: 700;
+      color: var(--cc, var(--t1));
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }}
+    .card-dir {{
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }}
+    .long-dir    {{ color: var(--green);  }}
+    .short-dir   {{ color: var(--red);    }}
+    .monitor-dir {{ color: var(--purple); }}
+    .card-price-grp {{ text-align: right; flex-shrink: 0; }}
+    .card-price {{
+      font-size: 25px;
+      font-weight: 600;
+      color: var(--t1);
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }}
+    .gbadge {{
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 4px;
+    }}
+    .badge-up {{ background: rgba(0,208,132,0.13); color: var(--green); }}
+    .badge-dn {{ background: rgba(255,75,90,0.13);  color: var(--red);  }}
 
-    /* ── Trade plan ─────────────────────────────────── */
-    .trade-plan {{
-      background: #080b10;
-      border: 1px solid #1c2030;
-      border-radius: 6px;
-      padding: 14px 16px;
+    /* ── Trade Plan Box ─────────────────────── */
+    .tp-box {{
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 16px 18px;
+      margin-bottom: 16px;
     }}
-    .trade-plan .section-lbl {{ margin-bottom: 10px; }}
-    .trade-row {{
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding: 8px 0;
-      border-bottom: 1px solid #111827;
-      gap: 16px;
-    }}
-    .trade-row.last {{ border-bottom: none; }}
-    .tl {{ color: #6b7280; white-space: nowrap; font-size: 12px; }}
-    .tv {{ color: #e6edf3; text-align: right; font-size: 12px; }}
-    .green {{ color: #00ff88; }}
-    .red   {{ color: #ff6b6b; }}
-
-    /* ── Checks section (monitors) ────────────────────── */
-    .checks-section {{
-      background: #111827;
-      border-radius: 6px;
-      padding: 12px 14px;
+    .tp-eyebrow {{
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--t3);
       margin-bottom: 12px;
     }}
-    .checks-label {{
-      font-size: 9px;
-      color: #6b7280;
+    .tp-row {{
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }}
+    .tp-row.tp-last {{ border-bottom: none; padding-bottom: 0; }}
+    .tp-icon  {{ width: 18px; text-align: center; flex-shrink: 0; font-size: 12px; }}
+    .ti-entry  {{ color: var(--blue);  }}
+    .ti-target {{ color: var(--green); }}
+    .ti-stop   {{ color: var(--red);   }}
+    .tp-key {{
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      color: var(--t2);
+      width: 52px;
+      flex-shrink: 0;
+    }}
+    .tp-val   {{ flex: 1; color: var(--t1); font-weight: 500; font-size: 13px; }}
+    .tp-g     {{ color: var(--green); }}
+    .tp-r     {{ color: var(--red);   }}
+    .tp-muted {{ font-size: 11px; font-weight: 400; color: var(--t2); }}
+
+    /* ── Metric Pills ───────────────────────── */
+    .pills {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }}
+    .pill {{
+      background: var(--s3);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }}
+    .pl {{
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--t3);
+    }}
+    .pv {{ font-size: 13px; font-weight: 600; color: var(--t1); }}
+    .pv-hi {{ color: var(--amber); }}
+
+    /* ── Chart ──────────────────────────────── */
+    .chart-box {{
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 12px 12px 8px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }}
+    .chart-legend {{
+      display: flex;
+      gap: 16px;
+      margin-top: 6px;
+      padding-left: 2px;
+    }}
+    .cleg       {{ font-size: 10px; font-weight: 500; color: var(--t2); }}
+    .cleg-vwap  {{ color: rgba(245,158,11,0.9); }}
+    .cleg-ema9  {{ color: rgba(96,165,250,0.85); }}
+    .cleg-ema20 {{ color: rgba(100,116,139,0.7); }}
+
+    /* ── Catalyst ───────────────────────────── */
+    .cat-box {{
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 14px 16px;
+    }}
+    .sec-lbl {{
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--t3);
       margin-bottom: 8px;
+    }}
+    .cat-text {{
+      font-size: 13px;
+      color: var(--t2);
+      line-height: 1.65;
+    }}
+
+    /* ── Checks (Monitor) ───────────────────── */
+    .checks-section {{
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 14px 16px;
+      margin-top: 12px;
     }}
     .checks-row {{
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
+      margin-top: 10px;
     }}
-    .check-badge {{
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 3px;
+    .cbadge {{
+      padding: 4px 10px;
+      border-radius: 5px;
       font-size: 10px;
-      font-weight: bold;
+      font-weight: 700;
+      letter-spacing: 0.2px;
     }}
-    .check-pass {{
-      background: #0d2b1a;
-      color: #00ff88;
-    }}
-    .check-fail {{
-      background: #2b0d0d;
-      color: #ff6b6b;
-    }}
+    .cbp {{ background: rgba(0,208,132,0.12); color: var(--green); border: 1px solid rgba(0,208,132,0.22); }}
+    .cbf {{ background: rgba(255,75,90,0.10);  color: var(--red);   border: 1px solid rgba(255,75,90,0.20);  }}
 
-    /* ── No setups ───────────────────────────────────── */
+    /* ── No Setups ──────────────────────────── */
     .no-setups {{
       text-align: center;
-      padding: 70px 20px;
-      border: 1px dashed #1c2030;
-      border-radius: 8px;
+      padding: 60px 20px;
+      border: 1px dashed var(--border);
+      border-radius: var(--r);
     }}
-    .no-icon {{ font-size: 44px; margin-bottom: 16px; color: #ffcc00; }}
-    .no-msg  {{ font-size: 16px; color: #8b949e; margin-bottom: 8px; }}
-    .no-sub  {{ font-size: 13px; color: #4b5563; }}
+    .no-icon {{ font-size: 32px; color: var(--amber); opacity: 0.5; margin-bottom: 12px; }}
+    .no-msg  {{ font-size: 16px; font-weight: 600; color: var(--t2); margin-bottom: 6px; }}
+    .no-sub  {{ font-size: 13px; color: var(--t3); }}
 
-    /* ── Footer ─────────────────────────────────────── */
+    /* ── How We Filter Section ──────────────── */
+    .rules-wrap {{
+      margin-top: 80px;
+      padding-top: 56px;
+      border-top: 1px solid var(--border);
+    }}
+    .rules-title {{
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--t1);
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }}
+    .rules-sub {{
+      font-size: 14px;
+      color: var(--t2);
+      margin-bottom: 40px;
+      max-width: 560px;
+    }}
+    .rules-cols {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 28px;
+    }}
+    .rule-card {{
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 22px;
+    }}
+    .rule-card-title {{
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }}
+    .rule-card.long-rc  .rule-card-title {{ color: var(--green);  }}
+    .rule-card.short-rc .rule-card-title {{ color: var(--red);    }}
+    .rule-card.both-rc  .rule-card-title {{ color: var(--blue);   }}
+    .rule-item {{ margin-bottom: 14px; }}
+    .rule-item:last-child {{ margin-bottom: 0; }}
+    .rule-plain {{
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--t1);
+      margin-bottom: 3px;
+      line-height: 1.4;
+    }}
+    .rule-tech {{
+      font-size: 11px;
+      color: var(--t3);
+      font-family: 'SF Mono', 'Consolas', 'Menlo', monospace;
+      line-height: 1.5;
+    }}
+
+    /* ── Footer ─────────────────────────────── */
     .footer {{
       text-align: center;
       margin-top: 48px;
-      padding-top: 20px;
-      border-top: 1px solid #1c2030;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
       font-size: 11px;
-      color: #374151;
-      line-height: 1.8;
+      color: var(--t3);
+      line-height: 2.2;
     }}
 
-    /* ── Mobile ─────────────────────────────────────── */
-    @media (max-width: 580px) {{
-      .grid-2        {{ grid-template-columns: 1fr; }}
-      .trade-row     {{ flex-direction: column; gap: 3px; }}
-      .tv            {{ text-align: left; }}
-      h1             {{ font-size: 20px; }}
-      .ticker        {{ font-size: 22px; }}
-      .quals-row     {{ font-size: 10px; }}
-      .section-header {{
-        flex-direction: column;
-        align-items: flex-start;
-      }}
-      .section-header .rules {{
-        margin-left: 0;
-        margin-top: 8px;
-      }}
+    /* ── Mobile ─────────────────────────────── */
+    @media (max-width: 620px) {{
+      body {{ padding: 0 12px 80px; }}
+      .card {{ padding: 18px 16px; }}
+      .pg-title {{ font-size: 26px; }}
+      .card-ticker {{ font-size: 22px; }}
+      .card-price  {{ font-size: 20px; }}
+      .rules-cols  {{ grid-template-columns: 1fr; }}
+      .tp-row      {{ flex-wrap: wrap; }}
+      .pg-meta     {{ gap: 16px; }}
     }}
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="wrap">
 
-    <div class="header">
-      <div class="header-badge">Elite Day Trading Research</div>
-      <h1>&#9650; ▼ Momentum Scanner</h1>
-      <div class="slot-label">{slot_info['label']}</div>
-      <div class="focus-text">Focus: {slot_info['focus']}</div>
-      <div class="scan-meta">
-        <div>Scanned <span class="val">{scan_time}</span></div>
-        <div>SPY <span class="val" style="color:{spy_color}">{spy_ret:+.2f}%</span></div>
-        <div>QQQ <span class="val" style="color:{qqq_color}">{qqq_ret:+.2f}%</span></div>
-        <div>Long <span class="val">{long_count}</span></div>
-        <div>Short <span class="val">{short_count}</span></div>
+    <!-- ── Page Header ─────────────────────────────── -->
+    <div class="pg-header">
+      <div class="pg-eyebrow">Elite Day Trading Research</div>
+      <h1 class="pg-title">Momentum Scanner</h1>
+      <div class="pg-slot">{slot_info['label']}</div>
+      <div class="pg-focus">Focus: {slot_info['focus']}</div>
+      <div class="pg-meta">
+        <div class="meta-item">Scanned &nbsp;<span class="meta-val">{scan_time}</span></div>
+        <div class="meta-item">SPY &nbsp;<span class="meta-val" style="color:{spy_col};">{spy_ret:+.2f}%</span></div>
+        <div class="meta-item">QQQ &nbsp;<span class="meta-val" style="color:{qqq_col};">{qqq_ret:+.2f}%</span></div>
+        <div class="meta-item">Longs &nbsp;<span class="meta-val">{long_count}</span></div>
+        <div class="meta-item">Shorts &nbsp;<span class="meta-val">{short_count}</span></div>
       </div>
     </div>
 
-    <!-- LONG SETUPS SECTION -->
-    <div class="section-header long">
-      <span>▲ LONG SETUPS ({long_count} found)</span>
-      <span class="rules">Price&gt;VWAP · RVOL&gt;1.2x · Above 9/20-EMA · RS outperforms SPY or QQQ · Runway≥1% · R/R≥1:1.5</span>
+    <!-- ── Long Setups ─────────────────────────────── -->
+    <div class="sec-head long">
+      <div class="sec-head-title">▲ Long Setups</div>
+      <div class="sec-head-count">{long_count} found</div>
+      <div class="sec-head-line"></div>
     </div>
     {long_cards}
 
-    <!-- SHORT SETUPS SECTION -->
-    <div class="section-header short">
-      <span>▼ SHORT SETUPS ({short_count} found)</span>
-      <span class="rules">Price&lt;VWAP · RVOL&gt;1.2x · Below 9/20-EMA · RS underperforms SPY and QQQ · Downside≥1% · R/R≥1:1.5</span>
+    <!-- ── Short Setups ────────────────────────────── -->
+    <div class="sec-head short">
+      <div class="sec-head-title">▼ Short Setups</div>
+      <div class="sec-head-count">{short_count} found</div>
+      <div class="sec-head-line"></div>
     </div>
     {short_cards}
 
-    <!-- MONITOR SECTION -->
-    <div class="section-header monitor">
-      <span>◉ MARKET MONITOR — GOOGL & NVDA</span>
+    <!-- ── Market Monitor ──────────────────────────── -->
+    <div class="sec-head monitor">
+      <div class="sec-head-title">◉ Market Monitor</div>
+      <div class="sec-head-count">GOOGL &amp; NVDA</div>
+      <div class="sec-head-line"></div>
     </div>
     {monitor_cards}
 
+    <!-- ── How We Filter ───────────────────────────── -->
+    <div class="rules-wrap">
+      <div class="rules-title">How the Scanner Filters</div>
+      <div class="rules-sub">Every setup shown here has passed all four checks below. Here's what each check means in plain language — and the exact technical parameters behind it.</div>
+
+      <div class="rules-cols">
+        <!-- Shared -->
+        <div class="rule-card both-rc" style="grid-column:1/-1;">
+          <div class="rule-card-title">Step 1 — Large, Liquid, and Movable (applies to both Long &amp; Short)</div>
+          <div class="rule-item">
+            <div class="rule-plain">Only well-known, large companies — household names with deep trading markets.</div>
+            <div class="rule-tech">Market Cap &gt; $20,000,000,000</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Trades at least 2 million shares on an average day — liquid enough to get in and out cleanly.</div>
+            <div class="rule-tech">Average Daily Volume (3-month) &gt; 2,000,000 shares</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Moves enough each day to make trading it worthwhile — we skip stocks that barely budge.</div>
+            <div class="rule-tech">ATR(14) as % of price &ge; 1.5%</div>
+          </div>
+        </div>
+
+        <!-- Long -->
+        <div class="rule-card long-rc">
+          <div class="rule-card-title">▲ Long — Steps 2, 3 &amp; 4</div>
+          <div class="rule-item">
+            <div class="rule-plain">The stock is trading above its volume-weighted average price for today — buyers are in control.</div>
+            <div class="rule-tech">Price &gt; VWAP (intraday, 5-min)</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Unusually high trading activity right now — more than 1.2&times; its expected volume for this time of day.</div>
+            <div class="rule-tech">RVOL &gt; 1.2&times; (today's volume vs expected by time-of-day)</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Price is rising and holding above its short-term trend lines — momentum is intact.</div>
+            <div class="rule-tech">Price &gt; EMA(9) and Price &gt; EMA(20) on 5-min bars · No climax-volume spike</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Outpacing the broader market — it's leading, not just riding the tide.</div>
+            <div class="rule-tech">Ticker intraday return &gt; SPY return OR &gt; QQQ return</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">There's at least 1% of clear air between the current price and the nearest overhead resistance — room to run.</div>
+            <div class="rule-tech">Runway to resistance &ge; 1.0% · Risk/Reward &ge; 1:1.5 (stop = VWAP)</div>
+          </div>
+        </div>
+
+        <!-- Short -->
+        <div class="rule-card short-rc">
+          <div class="rule-card-title">▼ Short — Steps 2, 3 &amp; 4</div>
+          <div class="rule-item">
+            <div class="rule-plain">The stock is trading below its volume-weighted average price — sellers are in control.</div>
+            <div class="rule-tech">Price &lt; VWAP (intraday, 5-min)</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Unusually high activity confirms the move is real — not just a quiet drift lower.</div>
+            <div class="rule-tech">RVOL &gt; 1.2&times; (today's volume vs expected by time-of-day)</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Price is breaking down and sitting below its short-term trend lines — downward momentum is confirmed.</div>
+            <div class="rule-tech">Price &lt; EMA(9) and Price &lt; EMA(20) on 5-min bars · No climax-volume spike</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">Lagging both major indices — it's weaker than the market, not just a sector rotation.</div>
+            <div class="rule-tech">Ticker return &lt; SPY return AND &lt; QQQ return</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-plain">At least 1% of clear air between price and the next support level below — room to fall.</div>
+            <div class="rule-tech">Downside to support &ge; 1.0% · Risk/Reward &ge; 1:1.5 (stop = VWAP)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rule-card both-rc">
+        <div class="rule-card-title">Trade Plan Logic</div>
+        <div class="rule-item">
+          <div class="rule-plain">Entry: wait for the 9-EMA to hold (or break for shorts) with a volume expansion bar confirming the move.</div>
+          <div class="rule-tech">Entry trigger = 9-EMA hold/break + RVOL surge on next 5-min close</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-plain">Target: the nearest technically significant price level above (longs) or below (shorts).</div>
+          <div class="rule-tech">Target = nearest resistance (long) or support (short): Prev Day High/Low, 52-Wk High/Low, Pre-Mkt High/Low</div>
+        </div>
+        <div class="rule-item">
+          <div class="rule-plain">Stop: if price crosses back through the VWAP, the trade thesis is invalidated — exit immediately.</div>
+          <div class="rule-tech">Hard stop = VWAP cross (long: below VWAP · short: above VWAP)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Footer ──────────────────────────────────── -->
     <div class="footer">
-      Page auto-refreshes every 5 minutes &nbsp;&bull;&nbsp;
-      Powered by yfinance + Alpha Vantage &nbsp;&bull;&nbsp;
-      Rules: Cap&gt;$20B &middot; ADV&gt;2M &middot; ATR&ge;1.5% &middot; RVOL&gt;1.2x &middot; Runway&ge;1% &middot; R/R&ge;1:1.5<br>
-      <strong>For informational &amp; research purposes only. Not financial advice. All trading involves substantial risk of loss.</strong>
+      Page auto-refreshes every 5 minutes &nbsp;&middot;&nbsp;
+      Data: yfinance (free, ~2–5 min delay) + Alpha Vantage news<br>
+      <strong>For informational and research purposes only. Not financial advice. All trading involves substantial risk of loss.</strong>
     </div>
 
   </div>
@@ -1498,7 +1848,7 @@ def main():
     print(f"  Scan complete — {len(longs)} long setup(s), {len(shorts)} short setup(s) found.")
     print(f"{'=' * 64}\n")
 
-    # ── Write HTML output ──────────────────────────────────────────────────────
+    # ── Write HTML output ──────────────────────────────────────────────────
     html        = build_html(longs, shorts, monitors, slot, scan_time, spy_ret, qqq_ret)
     output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'index.html')
 

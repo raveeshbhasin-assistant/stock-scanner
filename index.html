@@ -3,787 +3,122 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="refresh" content="300">
-  <title>Trading Scanner &mdash; 11:30 AM EST — Midday Shift</title>
+  <title>Momentum Scanner — Awaiting First Run</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+    :root {
+      --bg:     #07090e;
+      --s1:     #0d1018;
+      --s2:     #141820;
+      --border: rgba(255,255,255,0.06);
+      --t1:     #f0f2f7;
+      --t2:     rgba(240,242,247,0.55);
+      --t3:     rgba(240,242,247,0.28);
+      --blue:   #60a5fa;
+      --green:  #00d084;
+    }
     body {
-      background: #080b10;
-      color: #c9d1d9;
-      font-family: 'Courier New', 'Consolas', monospace;
-      font-size: 14px;
-      padding: 24px 16px 48px;
+      background: var(--bg);
+      color: var(--t1);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+      -webkit-font-smoothing: antialiased;
     }
-
-    /* ── Header ─────────────────────────────────────── */
-    .header {
-      text-align: center;
-      margin-bottom: 36px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid #1c2030;
-    }
-    .header-badge {
-      display: inline-block;
-      background: #111827;
-      border: 1px solid #2a3042;
-      border-radius: 20px;
-      padding: 4px 14px;
+    .wrap { max-width: 520px; width: 100%; text-align: center; }
+    .eyebrow {
       font-size: 10px;
-      color: #6b7280;
-      letter-spacing: 2px;
+      font-weight: 700;
+      letter-spacing: 3px;
       text-transform: uppercase;
+      color: var(--t3);
+      margin-bottom: 20px;
+    }
+    .title {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.8px;
+      color: var(--t1);
       margin-bottom: 12px;
     }
-    h1 {
-      font-size: 26px;
-      font-weight: bold;
-      color: #e6edf3;
-      letter-spacing: 1px;
-      margin-bottom: 6px;
-    }
-    .slot-label {
+    .sub {
       font-size: 14px;
-      color: #58a6ff;
-      margin-bottom: 4px;
+      color: var(--t2);
+      line-height: 1.7;
+      margin-bottom: 36px;
     }
-    .focus-text {
-      font-size: 12px;
-      color: #6b7280;
-      font-style: italic;
-      margin-bottom: 14px;
+    .times-card {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      text-align: left;
     }
-    .scan-meta {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 20px;
-      font-size: 12px;
-      color: #6b7280;
-    }
-    .scan-meta .val { color: #e6edf3; }
-
-    /* ── Container ──────────────────────────────────── */
-    .container { max-width: 860px; margin: 0 auto; }
-
-    /* ── Section Headers ────────────────────────────── */
-    .section-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-top: 42px;
-      margin-bottom: 20px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid #1c2030;
-      font-size: 14px;
-      font-weight: bold;
-      color: #e6edf3;
-      letter-spacing: 1px;
-    }
-    .section-header.long {
-      color: #00ff88;
-      border-bottom-color: #00ff88;
-    }
-    .section-header.short {
-      color: #ff6b6b;
-      border-bottom-color: #ff6b6b;
-    }
-    .section-header.monitor {
-      color: #8b5cf6;
-      border-bottom-color: #8b5cf6;
-    }
-    .section-header .count {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 3px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-    }
-    .section-header .rules {
-      margin-left: auto;
-      font-size: 11px;
-      color: #8b949e;
-      font-weight: normal;
-      letter-spacing: 0.5px;
-    }
-
-    /* ── Cards ──────────────────────────────────────── */
-    .card {
-      background: #0d1117;
-      border: 1px solid #1c2030;
-      border-left: 4px solid #00d4ff;
-      border-radius: 8px;
-      padding: 22px 20px;
-      margin-bottom: 24px;
-    }
-    .card-header {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    .ticker {
-      font-size: 28px;
-      font-weight: bold;
-      letter-spacing: 1.5px;
-    }
-    .price {
-      font-size: 22px;
-      color: #e6edf3;
-    }
-    .badge {
-      padding: 3px 10px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: bold;
-    }
-    .gap-up    { background: #0d2b1a; color: #00ff88; }
-    .gap-down  { background: #2b0d0d; color: #ff6b6b; }
-    .neutral   { background: #1a1f2e; color: #8b949e; }
-
-    /* ── Quals Row ───────────────────────────────────── */
-    .quals-row {
-      background: #111827;
-      border-radius: 6px;
-      padding: 10px 12px;
-      margin-bottom: 16px;
-      font-size: 11px;
-      color: #8b949e;
-      line-height: 1.5;
-      overflow-x: auto;
-    }
-
-    /* ── Metrics grid ────────────────────────────────── */
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-    .metric {
-      background: #111827;
-      border-radius: 6px;
-      padding: 10px 12px;
-    }
-    .lbl {
+    .times-title {
       font-size: 9px;
-      color: #6b7280;
+      font-weight: 700;
+      letter-spacing: 2.5px;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-bottom: 5px;
+      color: var(--t3);
+      margin-bottom: 16px;
     }
-    .val { font-size: 14px; color: #e6edf3; }
-    .val.hot { color: #ffcc00; }
-
-    /* ── Catalyst ────────────────────────────────────── */
-    .catalyst-box {
-      background: #111827;
-      border-radius: 6px;
-      padding: 12px 14px;
-      margin-bottom: 14px;
-    }
-    .section-lbl {
-      display: block;
-      font-size: 9px;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 7px;
-    }
-    .catalyst-box p {
-      font-size: 13px;
-      color: #c9d1d9;
-      line-height: 1.6;
-    }
-
-    /* ── Trade plan ─────────────────────────────────── */
-    .trade-plan {
-      background: #080b10;
-      border: 1px solid #1c2030;
-      border-radius: 6px;
-      padding: 14px 16px;
-    }
-    .trade-plan .section-lbl { margin-bottom: 10px; }
-    .trade-row {
+    .time-row {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      padding: 8px 0;
-      border-bottom: 1px solid #111827;
-      gap: 16px;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
     }
-    .trade-row.last { border-bottom: none; }
-    .tl { color: #6b7280; white-space: nowrap; font-size: 12px; }
-    .tv { color: #e6edf3; text-align: right; font-size: 12px; }
-    .green { color: #00ff88; }
-    .red   { color: #ff6b6b; }
-
-    /* ── Checks section (monitors) ────────────────────── */
-    .checks-section {
-      background: #111827;
-      border-radius: 6px;
-      padding: 12px 14px;
-      margin-bottom: 12px;
-    }
-    .checks-label {
-      font-size: 9px;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 8px;
-    }
-    .checks-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .check-badge {
+    .time-row:last-child { border-bottom: none; }
+    .time-name { color: var(--t2); font-weight: 500; }
+    .time-val  { color: var(--blue); font-weight: 600; font-size: 13px; }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
       display: inline-block;
-      padding: 4px 8px;
-      border-radius: 3px;
-      font-size: 10px;
-      font-weight: bold;
-    }
-    .check-pass {
-      background: #0d2b1a;
-      color: #00ff88;
-    }
-    .check-fail {
-      background: #2b0d0d;
-      color: #ff6b6b;
-    }
-
-    /* ── No setups ───────────────────────────────────── */
-    .no-setups {
-      text-align: center;
-      padding: 70px 20px;
-      border: 1px dashed #1c2030;
-      border-radius: 8px;
-    }
-    .no-icon { font-size: 44px; margin-bottom: 16px; color: #ffcc00; }
-    .no-msg  { font-size: 16px; color: #8b949e; margin-bottom: 8px; }
-    .no-sub  { font-size: 13px; color: #4b5563; }
-
-    /* ── Footer ─────────────────────────────────────── */
-    .footer {
-      text-align: center;
-      margin-top: 48px;
-      padding-top: 20px;
-      border-top: 1px solid #1c2030;
-      font-size: 11px;
-      color: #374151;
-      line-height: 1.8;
-    }
-
-    /* ── Mobile ─────────────────────────────────────── */
-    @media (max-width: 580px) {
-      .grid-2        { grid-template-columns: 1fr; }
-      .trade-row     { flex-direction: column; gap: 3px; }
-      .tv            { text-align: left; }
-      h1             { font-size: 20px; }
-      .ticker        { font-size: 22px; }
-      .quals-row     { font-size: 10px; }
-      .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .section-header .rules {
-        margin-left: 0;
-        margin-top: 8px;
-      }
+      margin-right: 8px;
+      opacity: 0.6;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-
-    <div class="header">
-      <div class="header-badge">Elite Day Trading Research</div>
-      <h1>&#9650; ▼ Momentum Scanner</h1>
-      <div class="slot-label">11:30 AM EST — Midday Shift</div>
-      <div class="focus-text">Focus: Sustained momentum into the European close</div>
-      <div class="scan-meta">
-        <div>Scanned <span class="val">Mar 27, 2026  12:38 PM EST</span></div>
-        <div>SPY <span class="val" style="color:#ff6b6b">-0.34%</span></div>
-        <div>QQQ <span class="val" style="color:#ff6b6b">-0.46%</span></div>
-        <div>Long <span class="val">0</span></div>
-        <div>Short <span class="val">6</span></div>
+  <div class="wrap">
+    <div class="eyebrow">Elite Day Trading Research</div>
+    <h1 class="title">Momentum Scanner</h1>
+    <p class="sub">
+      The scanner hasn't run yet. It executes at the scheduled times below
+      and replaces this page with live results automatically.
+    </p>
+    <div class="times-card">
+      <div class="times-title">Scheduled Scan Windows (EST / EDT)</div>
+      <div class="time-row">
+        <span class="time-name"><span class="dot"></span>Pre-Market Setup</span>
+        <span class="time-val">8:00 AM</span>
+      </div>
+      <div class="time-row">
+        <span class="time-name"><span class="dot"></span>Macro Check</span>
+        <span class="time-val">8:45 AM</span>
+      </div>
+      <div class="time-row">
+        <span class="time-name"><span class="dot"></span>True Open Trend</span>
+        <span class="time-val">9:45 AM</span>
+      </div>
+      <div class="time-row">
+        <span class="time-name"><span class="dot"></span>Midday Shift</span>
+        <span class="time-val">11:30 AM</span>
+      </div>
+      <div class="time-row">
+        <span class="time-name"><span class="dot"></span>Power Hour Prep</span>
+        <span class="time-val">3:00 PM</span>
       </div>
     </div>
-
-    <!-- LONG SETUPS SECTION -->
-    <div class="section-header long">
-      <span>▲ LONG SETUPS (0 found)</span>
-      <span class="rules">Price&gt;VWAP · RVOL&gt;1.2x · Above 9/20-EMA · RS outperforms SPY or QQQ · Runway≥1% · R/R≥1:1.5</span>
-    </div>
-    
-<div class="no-setups">
-  <div class="no-icon">&#9888;</div>
-  <div class="no-msg">No long setups meet the criteria.</div>
-  <div class="no-sub">Capital preservation is the priority.</div>
-</div>
-
-    <!-- SHORT SETUPS SECTION -->
-    <div class="section-header short">
-      <span>▼ SHORT SETUPS (6 found)</span>
-      <span class="rules">Price&lt;VWAP · RVOL&gt;1.2x · Below 9/20-EMA · RS underperforms SPY and QQQ · Downside≥1% · R/R≥1:1.5</span>
-    </div>
-    
-<div class="card short-card" style="border-left-color:#ff4444;">
-  <div class="card-header">
-    <span class="ticker" style="color:#ff4444;">ARM</span>
-    <span class="price">$144.50</span>
-    <span class="badge gap-down">▼ 6.65%</span>
-  </div>
-
-  <div class="quals-row">
-    Cap $153B | ADV 6.6M | ATR 7.0% | RVOL 2.2x | RS -1.9% vs SPY -0.3% | Downside 30.8% | R/R 1:34.3
-  </div>
-
-  <div class="grid-2">
-    <div class="metric">
-      <div class="lbl">Price / VWAP</div>
-      <div class="val">$144.50 / $145.80</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Rel. Volume (RVOL)</div>
-      <div class="val hot">2.22x normal</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">9-EMA / 20-EMA (5m)</div>
-      <div class="val">$145.41 / $145.50</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">ATR Volatility</div>
-      <div class="val">7.04% of price</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Sentiment Score</div>
-      <div class="val">74% Positive</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Weakness vs Market</div>
-      <div class="val hot">-1.91% vs SPY -0.34%</div>
-    </div>
-  </div>
-
-  <div class="catalyst-box">
-    <span class="section-lbl">THE CATALYST</span>
-    <p>Arm’s AI CPU Expansion Pushes Market Sentiment Higher… (StocksToTrade)</p>
-  </div>
-
-  <div class="trade-plan">
-    <span class="section-lbl">TRADE PLAN</span>
-    <div class="trade-row">
-      <span class="tl">Entry Trigger</span>
-      <span class="tv">Break below $100.02 with RVOL maintaining >1.2x</span>
-    </div>
-    <div class="trade-row">
-      <span class="tl">Target (52-Week Low)</span>
-      <span class="tv green">$100.02 &nbsp;(&minus;30.8% downside)</span>
-    </div>
-    <div class="trade-row last">
-      <span class="tl">Hard Stop (VWAP)</span>
-      <span class="tv red">$145.80 &nbsp;(+0.9% risk &rarr; 1:34.3 R/R)</span>
-    </div>
-  </div>
-</div>
-<div class="card short-card" style="border-left-color:#ff6b6b;">
-  <div class="card-header">
-    <span class="ticker" style="color:#ff6b6b;">CCL</span>
-    <span class="price">$24.34</span>
-    <span class="badge gap-down">▼ 3.72%</span>
-  </div>
-
-  <div class="quals-row">
-    Cap $34B | ADV 23.1M | ATR 5.2% | RVOL 1.9x | RS -3.5% vs SPY -0.3% | Downside 3.6% | R/R 1:4.0
-  </div>
-
-  <div class="grid-2">
-    <div class="metric">
-      <div class="lbl">Price / VWAP</div>
-      <div class="val">$24.34 / $24.56</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Rel. Volume (RVOL)</div>
-      <div class="val hot">1.86x normal</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">9-EMA / 20-EMA (5m)</div>
-      <div class="val">$24.34 / $24.37</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">ATR Volatility</div>
-      <div class="val">5.17% of price</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Sentiment Score</div>
-      <div class="val">56% Positive</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Weakness vs Market</div>
-      <div class="val hot">-3.53% vs SPY -0.34%</div>
-    </div>
-  </div>
-
-  <div class="catalyst-box">
-    <span class="section-lbl">THE CATALYST</span>
-    <p>Carnival Drops 4%: 3 Reasons Cruise Stocks Are Struggling With Oil and Geopolitical Risk… (24/7 Wall St.)</p>
-  </div>
-
-  <div class="trade-plan">
-    <span class="section-lbl">TRADE PLAN</span>
-    <div class="trade-row">
-      <span class="tl">Entry Trigger</span>
-      <span class="tv">Break below $23.47 with RVOL maintaining >1.2x</span>
-    </div>
-    <div class="trade-row">
-      <span class="tl">Target (52-Week Low)</span>
-      <span class="tv green">$23.47 &nbsp;(&minus;3.6% downside)</span>
-    </div>
-    <div class="trade-row last">
-      <span class="tl">Hard Stop (VWAP)</span>
-      <span class="tv red">$24.56 &nbsp;(+0.9% risk &rarr; 1:4.0 R/R)</span>
-    </div>
-  </div>
-</div>
-<div class="card short-card" style="border-left-color:#ff8c42;">
-  <div class="card-header">
-    <span class="ticker" style="color:#ff8c42;">CRWD</span>
-    <span class="price">$368.00</span>
-    <span class="badge gap-down">▼ 6.27%</span>
-  </div>
-
-  <div class="quals-row">
-    Cap $93B | ADV 3.8M | ATR 5.3% | RVOL 1.8x | RS -0.5% vs SPY -0.3% | Downside 2.6% | R/R 1:15.9
-  </div>
-
-  <div class="grid-2">
-    <div class="metric">
-      <div class="lbl">Price / VWAP</div>
-      <div class="val">$368.00 / $368.61</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Rel. Volume (RVOL)</div>
-      <div class="val hot">1.82x normal</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">9-EMA / 20-EMA (5m)</div>
-      <div class="val">$370.62 / $370.75</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">ATR Volatility</div>
-      <div class="val">5.30% of price</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Sentiment Score</div>
-      <div class="val">52% Positive</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Weakness vs Market</div>
-      <div class="val hot">-0.51% vs SPY -0.34%</div>
-    </div>
-  </div>
-
-  <div class="catalyst-box">
-    <span class="section-lbl">THE CATALYST</span>
-    <p>Why Palo Alto Networks May Hit a $261 Price Target: The AI Security Platformlate V2… (TIKR.com)</p>
-  </div>
-
-  <div class="trade-plan">
-    <span class="section-lbl">TRADE PLAN</span>
-    <div class="trade-row">
-      <span class="tl">Entry Trigger</span>
-      <span class="tv">Break below $358.25 with RVOL maintaining >1.2x</span>
-    </div>
-    <div class="trade-row">
-      <span class="tl">Target (Pre-Market Low)</span>
-      <span class="tv green">$358.25 &nbsp;(&minus;2.6% downside)</span>
-    </div>
-    <div class="trade-row last">
-      <span class="tl">Hard Stop (VWAP)</span>
-      <span class="tv red">$368.61 &nbsp;(+0.2% risk &rarr; 1:15.9 R/R)</span>
-    </div>
-  </div>
-</div>
-<div class="card short-card" style="border-left-color:#ff3fa4;">
-  <div class="card-header">
-    <span class="ticker" style="color:#ff3fa4;">C</span>
-    <span class="price">$107.99</span>
-    <span class="badge gap-down">▼ 3.93%</span>
-  </div>
-
-  <div class="quals-row">
-    Cap $189B | ADV 14.8M | ATR 3.5% | RVOL 1.6x | RS -1.9% vs SPY -0.3% | Downside 5.5% | R/R 1:5.5
-  </div>
-
-  <div class="grid-2">
-    <div class="metric">
-      <div class="lbl">Price / VWAP</div>
-      <div class="val">$107.99 / $109.07</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Rel. Volume (RVOL)</div>
-      <div class="val hot">1.65x normal</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">9-EMA / 20-EMA (5m)</div>
-      <div class="val">$108.53 / $109.26</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">ATR Volatility</div>
-      <div class="val">3.48% of price</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Sentiment Score</div>
-      <div class="val">52% Positive</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Weakness vs Market</div>
-      <div class="val hot">-1.90% vs SPY -0.34%</div>
-    </div>
-  </div>
-
-  <div class="catalyst-box">
-    <span class="section-lbl">THE CATALYST</span>
-    <p>Higher oil prices could revive U.S. shale drilling in 2026, Citi says… (World Oil)</p>
-  </div>
-
-  <div class="trade-plan">
-    <span class="section-lbl">TRADE PLAN</span>
-    <div class="trade-row">
-      <span class="tl">Entry Trigger</span>
-      <span class="tv">Break below $102.01 with RVOL maintaining >1.2x</span>
-    </div>
-    <div class="trade-row">
-      <span class="tl">Target (52-Week Low)</span>
-      <span class="tv green">$102.01 &nbsp;(&minus;5.5% downside)</span>
-    </div>
-    <div class="trade-row last">
-      <span class="tl">Hard Stop (VWAP)</span>
-      <span class="tv red">$109.07 &nbsp;(+1.0% risk &rarr; 1:5.5 R/R)</span>
-    </div>
-  </div>
-</div>
-<div class="card short-card" style="border-left-color:#c44dff;">
-  <div class="card-header">
-    <span class="ticker" style="color:#c44dff;">HOOD</span>
-    <span class="price">$66.89</span>
-    <span class="badge gap-down">▼ 4.92%</span>
-  </div>
-
-  <div class="quals-row">
-    Cap $60B | ADV 28.7M | ATR 5.9% | RVOL 1.3x | RS -1.5% vs SPY -0.3% | Downside 1.3% | R/R 1:3.3
-  </div>
-
-  <div class="grid-2">
-    <div class="metric">
-      <div class="lbl">Price / VWAP</div>
-      <div class="val">$66.89 / $67.14</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Rel. Volume (RVOL)</div>
-      <div class="val hot">1.29x normal</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">9-EMA / 20-EMA (5m)</div>
-      <div class="val">$67.20 / $67.26</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">ATR Volatility</div>
-      <div class="val">5.94% of price</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Sentiment Score</div>
-      <div class="val">54% Positive</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Weakness vs Market</div>
-      <div class="val hot">-1.50% vs SPY -0.34%</div>
-    </div>
-  </div>
-
-  <div class="catalyst-box">
-    <span class="section-lbl">THE CATALYST</span>
-    <p>Robinhood's Profitability Should Accelerate Platform Push as Neo-Broker Grows Up With Its … (Morningstar)</p>
-  </div>
-
-  <div class="trade-plan">
-    <span class="section-lbl">TRADE PLAN</span>
-    <div class="trade-row">
-      <span class="tl">Entry Trigger</span>
-      <span class="tv">Break below $66.05 with RVOL maintaining >1.2x</span>
-    </div>
-    <div class="trade-row">
-      <span class="tl">Target (52-Week Low)</span>
-      <span class="tv green">$66.05 &nbsp;(&minus;1.3% downside)</span>
-    </div>
-    <div class="trade-row last">
-      <span class="tl">Hard Stop (VWAP)</span>
-      <span class="tv red">$67.14 &nbsp;(+0.4% risk &rarr; 1:3.3 R/R)</span>
-    </div>
-  </div>
-</div>
-<div class="card short-card" style="border-left-color:#ff4444;">
-  <div class="card-header">
-    <span class="ticker" style="color:#ff4444;">COIN</span>
-    <span class="price">$161.24</span>
-    <span class="badge gap-down">▼ 7.00%</span>
-  </div>
-
-  <div class="quals-row">
-    Cap $43B | ADV 12.3M | ATR 7.6% | RVOL 1.2x | RS -3.0% vs SPY -0.3% | Downside 13.6% | R/R 1:16.0
-  </div>
-
-  <div class="grid-2">
-    <div class="metric">
-      <div class="lbl">Price / VWAP</div>
-      <div class="val">$161.24 / $162.61</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Rel. Volume (RVOL)</div>
-      <div class="val hot">1.22x normal</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">9-EMA / 20-EMA (5m)</div>
-      <div class="val">$161.86 / $161.99</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">ATR Volatility</div>
-      <div class="val">7.59% of price</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Sentiment Score</div>
-      <div class="val">54% Positive</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Weakness vs Market</div>
-      <div class="val hot">-2.96% vs SPY -0.34%</div>
-    </div>
-  </div>
-
-  <div class="catalyst-box">
-    <span class="section-lbl">THE CATALYST</span>
-    <p>Stocks making big moves this week: Shopify, Winnebago, Coinbase, STAAR Surgical, and Viavi… (The Globe and Mail)</p>
-  </div>
-
-  <div class="trade-plan">
-    <span class="section-lbl">TRADE PLAN</span>
-    <div class="trade-row">
-      <span class="tl">Entry Trigger</span>
-      <span class="tv">Break below $139.36 with RVOL maintaining >1.2x</span>
-    </div>
-    <div class="trade-row">
-      <span class="tl">Target (52-Week Low)</span>
-      <span class="tv green">$139.36 &nbsp;(&minus;13.6% downside)</span>
-    </div>
-    <div class="trade-row last">
-      <span class="tl">Hard Stop (VWAP)</span>
-      <span class="tv red">$162.61 &nbsp;(+0.8% risk &rarr; 1:16.0 R/R)</span>
-    </div>
-  </div>
-</div>
-
-    <!-- MONITOR SECTION -->
-    <div class="section-header monitor">
-      <span>◉ MARKET MONITOR — GOOGL & NVDA</span>
-    </div>
-    
-<div class="card monitor-card" style="border-left-color:#8b5cf6;">
-  <div class="card-header">
-    <span class="ticker" style="color:#8b5cf6;">GOOGL</span>
-    <span class="price">$276.36</span>
-    <span class="badge gap-down">▼ 1.62%</span>
-    <span class="badge neutral">+0.01% Today</span>
-    <span style="background:#003318;color:#00ff88;border:1px solid #00ff8844;border-radius:4px;padding:2px 8px;font-size:10px;letter-spacing:1px;">LIVE</span>
-  </div>
-
-  <div class="grid-2">
-    <div class="metric">
-      <div class="lbl">Current Price</div>
-      <div class="val">$276.36</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Today Return</div>
-      <div class="val hot">+0.01%</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Sentiment</div>
-      <div class="val">49% Positive</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Market Context</div>
-      <div class="val">SPY -0.34% | QQQ -0.46%</div>
-    </div>
-  </div>
-
-  <div class="catalyst-box">
-    <span class="section-lbl">HEADLINE</span>
-    <p>Alphabet Inc Class A Stock (GOOGL) Moved Down by 4.15% on Mar 27: Facts Behind the Movemen… (TradingKey)</p>
-  </div>
-
-  <div class="checks-section">
-    <div class="checks-label">LONG Qualification (Today data)</div>
-    <div class="checks-row"><span class="check-badge check-pass">✓ Cap $3343B</span><span class="check-badge check-pass">✓ ADV 33.4M</span><span class="check-badge check-pass">✓ ATR 2.8%</span><span class="check-badge check-fail">✗ P>VWAP $276.36>$277.55</span><span class="check-badge check-fail">✗ RVOL 1.1x</span><span class="check-badge check-fail">✗ EMAs↑ 9E:277 20E:277</span><span class="check-badge check-pass">✓ RS↑ +0.0%</span><span class="check-badge check-pass">✓ Runway 2.8%</span><span class="check-badge check-fail">✗ R/R 1:0.0</span></div>
-  </div>
-
-  <div class="checks-section">
-    <div class="checks-label">SHORT Qualification (Today data)</div>
-    <div class="checks-row"><span class="check-badge check-pass">✓ Cap $3343B</span><span class="check-badge check-pass">✓ ADV 33.4M</span><span class="check-badge check-pass">✓ ATR 2.8%</span><span class="check-badge check-pass">✓ P<VWAP $276.36<277.55</span><span class="check-badge check-fail">✗ RVOL 1.1x</span><span class="check-badge check-pass">✓ EMAs↓ 9E:277 20E:277</span><span class="check-badge check-fail">✗ RS↓ +0.0%</span><span class="check-badge check-fail">✗ Downside 0.3%</span><span class="check-badge check-fail">✗ R/R 1:0.7</span></div>
-  </div>
-</div>
-<div class="card monitor-card" style="border-left-color:#8b5cf6;">
-  <div class="card-header">
-    <span class="ticker" style="color:#8b5cf6;">NVDA</span>
-    <span class="price">$168.52</span>
-    <span class="badge gap-down">▼ 1.59%</span>
-    <span class="badge neutral">-0.69% Today</span>
-    <span style="background:#003318;color:#00ff88;border:1px solid #00ff8844;border-radius:4px;padding:2px 8px;font-size:10px;letter-spacing:1px;">LIVE</span>
-  </div>
-
-  <div class="grid-2">
-    <div class="metric">
-      <div class="lbl">Current Price</div>
-      <div class="val">$168.52</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Today Return</div>
-      <div class="val hot">-0.69%</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Sentiment</div>
-      <div class="val">N/A</div>
-    </div>
-    <div class="metric">
-      <div class="lbl">Market Context</div>
-      <div class="val">SPY -0.34% | QQQ -0.46%</div>
-    </div>
-  </div>
-
-  <div class="catalyst-box">
-    <span class="section-lbl">HEADLINE</span>
-    <p>Monitoring price action and volatility.</p>
-  </div>
-
-  <div class="checks-section">
-    <div class="checks-label">LONG Qualification (Today data)</div>
-    <div class="checks-row"><span class="check-badge check-pass">✓ Cap $4095B</span><span class="check-badge check-pass">✓ ADV 176.9M</span><span class="check-badge check-pass">✓ ATR 3.1%</span><span class="check-badge check-fail">✗ P>VWAP $168.52>$169.14</span><span class="check-badge check-pass">✓ RVOL 1.2x</span><span class="check-badge check-fail">✗ EMAs↑ 9E:169 20E:169</span><span class="check-badge check-fail">✗ RS↑ -0.7%</span><span class="check-badge check-pass">✓ Runway 4.7%</span><span class="check-badge check-fail">✗ R/R 1:0.0</span></div>
-  </div>
-
-  <div class="checks-section">
-    <div class="checks-label">SHORT Qualification (Today data)</div>
-    <div class="checks-row"><span class="check-badge check-pass">✓ Cap $4095B</span><span class="check-badge check-pass">✓ ADV 176.9M</span><span class="check-badge check-pass">✓ ATR 3.1%</span><span class="check-badge check-pass">✓ P<VWAP $168.52<169.14</span><span class="check-badge check-pass">✓ RVOL 1.2x</span><span class="check-badge check-pass">✓ EMAs↓ 9E:169 20E:169</span><span class="check-badge check-pass">✓ RS↓ -0.7%</span><span class="check-badge check-fail">✗ Downside 0.6%</span><span class="check-badge check-pass">✓ R/R 1:1.5</span></div>
-  </div>
-</div>
-
-    <div class="footer">
-      Page auto-refreshes every 5 minutes &nbsp;&bull;&nbsp;
-      Powered by yfinance + Alpha Vantage &nbsp;&bull;&nbsp;
-      Rules: Cap&gt;$20B &middot; ADV&gt;2M &middot; ATR&ge;1.5% &middot; RVOL&gt;1.2x &middot; Runway&ge;1% &middot; R/R&ge;1:1.5<br>
-      <strong>For informational &amp; research purposes only. Not financial advice. All trading involves substantial risk of loss.</strong>
-    </div>
-
   </div>
 </body>
 </html>
