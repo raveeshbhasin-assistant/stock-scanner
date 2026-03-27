@@ -7,10 +7,17 @@ Applies a momentum, liquidity, and catalyst framework.
 Outputs index.html for GitHub Pages hosting.
 
 Rules:
-  1. Universe & Liquidity  — Market Cap >$20B, ADV >2M, ATR >=1.5%
-  2. Volume & Momentum     — Price>VWAP, RVOL>1.2x, above 9/20-EMA, no climax
-  3. Context               — Outperforming SPY or QQQ (sentiment check removed)
-  4. Risk/Reward & Levels  — Runway >=1%, R/R >= 1:1.5
+  LONG:
+    1. Universe & Liquidity  — Market Cap >$20B, ADV >2M, ATR >=1.5%
+    2. Volume & Momentum     — Price>VWAP, RVOL>1.2x, above 9/20-EMA, no climax
+    3. Context               — Outperforming SPY or QQQ
+    4. Risk/Reward & Levels  — Runway >=1%, R/R >= 1:1.5
+
+  SHORT:
+    1. Universe & Liquidity  — Market Cap >$20B, ADV >2M, ATR >=1.5%
+    2. Volume & Momentum     — Price<VWAP, RVOL>1.2x, below 9/20-EMA, no climax
+    3. Context               — Underperforming BOTH SPY and QQQ
+    4. Risk/Reward & Levels  — Downside >=1%, R/R >= 1:1.5
 
 Data:  yfinance (free, ~2-5 min delay)
 News:  Alpha Vantage News Headlines API
@@ -30,17 +37,20 @@ import pytz
 ALPHA_VANTAGE_KEY = os.environ.get('ALPHA_VANTAGE_KEY', '10M4I9CYR7SPPVSE')
 EST = pytz.timezone('US/Eastern')
 
-# Rule 1 thresholds (relaxed)
-MIN_MARKET_CAP = 20_000_000_000   # $20B  (was $50B)
-MIN_ADV        = 2_000_000        # 2M shares/day  (was 5M)
-MIN_ATR_PCT    = 1.5              # ATR as % of price  (was 2.5%)
+# Rule 1 thresholds
+MIN_MARKET_CAP = 20_000_000_000   # $20B
+MIN_ADV        = 2_000_000        # 2M shares/day
+MIN_ATR_PCT    = 1.5              # ATR as % of price
 
-# Rule 2 thresholds (relaxed)
-MIN_RVOL       = 1.2              # 1.2x normal volume  (was 1.5x)
+# Rule 2 thresholds
+MIN_RVOL       = 1.2              # 1.2x normal volume
 
-# Rule 4 thresholds (relaxed)
-MIN_RUNWAY_PCT = 1.0              # 1% to nearest resistance  (was 2%)
-MIN_RR_RATIO   = 1.5              # 1:1.5 risk/reward minimum  (was 1:2)
+# Rule 4 thresholds
+MIN_RUNWAY_PCT = 1.0              # 1% to nearest resistance/support
+MIN_RR_RATIO   = 1.5              # 1:1.5 risk/reward minimum
+
+# Monitor tickers
+MONITOR_TICKERS = ['GOOGL', 'NVDA']
 
 # Time slot definitions
 TIME_SLOTS = {
@@ -66,8 +76,9 @@ TIME_SLOTS = {
     },
 }
 
-CARD_COLORS = ['#00d4ff', '#00ff88', '#ffcc00', '#ff6b35', '#c77dff',
-               '#ff6b6b', '#4ecdc4', '#ffe66d', '#a8e6cf', '#ffd3b6']
+LONG_CARD_COLORS = ['#00d4ff', '#00ff88', '#ffcc00', '#ff6b35', '#c77dff']
+SHORT_CARD_COLORS = ['#ff4444', '#ff6b6b', '#ff8c42', '#ff3fa4', '#c44dff']
+MONITOR_CARD_COLOR = '#8b5cf6'
 
 # ─── UNIVERSE ─────────────────────────────────────────────────────────────────
 
@@ -145,11 +156,11 @@ def get_slot() -> str:
 
 # ─── TECHNICAL HELPERS ────────────────────────────────────────────────────────
 
-def ema(series, period):
+def ema(series: pd.Series, period: int) -> pd.Series:
     return series.ewm(span=period, adjust=False).mean()
 
 
-def calc_atr_pct(daily, period=14):
+def calc_atr_pct(daily: pd.DataFrame, period: int = 14) -> float:
     """ATR expressed as a % of the last closing price."""
     h, l, c = daily['High'], daily['Low'], daily['Close']
     prev_c = c.shift(1)
@@ -160,7 +171,7 @@ def calc_atr_pct(daily, period=14):
     return float(atr / c.iloc[-1] * 100)
 
 
-def calc_vwap(df):
+def calc_vwap(df: pd.DataFrame) -> float:
     """Intraday VWAP (resets at open) from 5-min bars."""
     tp = (df['High'] + df['Low'] + df['Close']) / 3
     cum_tpv = (tp * df['Volume']).cumsum()
@@ -168,8 +179,12 @@ def calc_vwap(df):
     return float(cum_tpv.iloc[-1] / cum_vol.iloc[-1])
 
 
-def calc_rvol(df, adv):
-    """Relative volume vs expected volume for this time of day."""
+def calc_rvol(df: pd.DataFrame, adv: float) -> float:
+    """
+    Relative volume vs expected volume for this time of day.
+    Compares today's accumulated volume to the fraction of ADV
+    that would normally have traded by now.
+    """
     today_vol = float(df['Volume'].sum())
     last_ts   = df.index[-1]
 
@@ -191,17 +206,23 @@ def calc_rvol(df, adv):
     return today_vol / expected if expected > 0 else 0.0
 
 
-def is_climax_volume(df):
-    """True if the most recent bar is a parabolic (climax) spike."""
+def is_climax_volume(df: pd.DataFrame) -> bool:
+    """
+    True if the most recent bar is a parabolic (climax) spike.
+    Defined as the last bar volume > 3x the mean of all prior bars.
+    """
     if len(df) < 5:
         return False
-    vols     = df['Volume']
-    last     = float(vols.iloc[-1])
+    vols    = df['Volume']
+    last    = float(vols.iloc[-1])
     avg_prev = float(vols.iloc[:-1].mean())
     return last > 3.0 * avg_prev
 
 
-def find_resistance(price, prev_day_high, week52_high, premarket_high):
+def find_resistance(price: float,
+                    prev_day_high: float,
+                    week52_high: float,
+                    premarket_high: float | None) -> tuple:
     """Return (nearest_resistance_above_price, label) or (None, None)."""
     candidates = {
         'Previous Day High': prev_day_high,
@@ -218,13 +239,37 @@ def find_resistance(price, prev_day_high, week52_high, premarket_high):
     return above[label], label
 
 
-# ─── NEWS HEADLINES ───────────────────────────────────────────────────────────
+def find_support(price: float,
+                 prev_day_low: float,
+                 week52_low: float,
+                 premarket_low: float | None) -> tuple:
+    """Return (nearest_support_below_price, label) or (None, None)."""
+    candidates = {
+        'Previous Day Low': prev_day_low,
+        '52-Week Low':      week52_low,
+    }
+    if premarket_low and premarket_low < price * 0.999:
+        candidates['Pre-Market Low'] = premarket_low
 
-_sentiment_cache = {}
+    below = {k: v for k, v in candidates.items() if v < price * 0.999}
+    if not below:
+        return None, None
+
+    label = max(below, key=below.get)
+    return below[label], label
 
 
-def get_sentiment(ticker):
-    """Return (pct_positive or None, headline str). Cached per run."""
+# ─── NEWS & SENTIMENT ────────────────────────────────────────────────────────
+
+_sentiment_cache: dict = {}
+
+
+def get_sentiment(ticker: str) -> tuple:
+    """
+    Return (pct_positive: float|None, headline: str).
+    pct_positive is 0-100 mapped from Alpha Vantage's -1…+1 score.
+    Results are cached for the duration of the scan run.
+    """
     if ticker in _sentiment_cache:
         return _sentiment_cache[ticker]
 
@@ -264,20 +309,122 @@ def get_sentiment(ticker):
         _sentiment_cache[ticker] = (pct, headline)
         return pct, headline
 
-    except Exception:
+    except Exception as e:
         _sentiment_cache[ticker] = (None, '')
         return None, ''
 
 
-# ─── SINGLE STOCK SCAN ────────────────────────────────────────────────────────
+# ─── DATA FETCHING ────────────────────────────────────────────────────────────
 
-def scan_ticker(ticker, slot, spy_ret, qqq_ret):
-    """Apply all rules. Returns setup dict on pass, None on any failure."""
+def fetch_raw(ticker: str) -> dict | None:
+    """
+    Fetch all data needed for long/short analysis.
+    Returns a dict with all fields or None on any failure.
+    """
     try:
-        tk   = yf.Ticker(ticker)
+        tk = yf.Ticker(ticker)
         info = tk.fast_info
 
-        # ── Rule 1: Universe & Liquidity ──────────────────────────────────
+        # Fast pre-filters
+        mkt_cap = getattr(info, 'market_cap', None) or 0
+        adv = getattr(info, 'three_month_average_volume', None) or 0
+
+        # Daily data
+        daily = tk.history(period='3mo', interval='1d', auto_adjust=True)
+        if len(daily) < 15:
+            return None
+
+        # Intraday 5-min data
+        intra = tk.history(period='1d', interval='5m', auto_adjust=True)
+        if len(intra) < 6:
+            return None
+
+        # Pre/post market 1-min data
+        prepost = None
+        try:
+            prepost = tk.history(period='1d', interval='1m', prepost=True, auto_adjust=True)
+            if prepost is not None and len(prepost) > 0:
+                prepost.index = prepost.index.tz_convert(EST)
+        except Exception:
+            pass
+
+        # Calculate all metrics
+        price = float(intra['Close'].iloc[-1])
+        vwap = calc_vwap(intra)
+        atr_pct = calc_atr_pct(daily)
+        rvol = calc_rvol(intra, float(adv))
+
+        closes = intra['Close']
+        ema9_series = ema(closes, 9)
+        ema20_series = ema(closes, 20)
+        ema9 = float(ema9_series.iloc[-1])
+        ema20 = float(ema20_series.iloc[-1])
+
+        climax = is_climax_volume(intra)
+
+        prev_close = float(daily['Close'].iloc[-2]) if len(daily) >= 2 else price
+        gap_pct = (price - prev_close) / prev_close * 100
+
+        first_price = float(intra['Close'].iloc[0])
+        ticker_ret = (price - first_price) / first_price * 100
+
+        prev_day_high = float(daily['High'].iloc[-2]) if len(daily) >= 2 else price
+        prev_day_low = float(daily['Low'].iloc[-2]) if len(daily) >= 2 else price
+        week52_high = float(daily['High'].max())
+        week52_low = float(daily['Low'].min())
+
+        premarket_high = None
+        premarket_low = None
+        if prepost is not None and len(prepost) > 0:
+            pm_only = prepost[prepost.index.time < pd.Timestamp('09:30').time()]
+            if len(pm_only) > 0:
+                premarket_high = float(pm_only['High'].max())
+                premarket_low = float(pm_only['Low'].min())
+
+        resistance, res_label = find_resistance(price, prev_day_high, week52_high, premarket_high)
+        support, sup_label = find_support(price, prev_day_low, week52_low, premarket_low)
+
+        return {
+            'ticker': ticker,
+            'price': price,
+            'vwap': vwap,
+            'ema9': ema9,
+            'ema20': ema20,
+            'rvol': rvol,
+            'atr_pct': atr_pct,
+            'climax': climax,
+            'gap_pct': gap_pct,
+            'ticker_ret': ticker_ret,
+            'resistance': resistance,
+            'res_label': res_label,
+            'support': support,
+            'sup_label': sup_label,
+            'mkt_cap': mkt_cap,
+            'mkt_cap_b': mkt_cap / 1e9,
+            'adv': adv,
+            'adv_m': adv / 1e6,
+            'prev_day_high': prev_day_high,
+            'prev_day_low': prev_day_low,
+            'week52_high': week52_high,
+            'week52_low': week52_low,
+        }
+
+    except Exception as e:
+        return None
+
+
+# ─── LONG SCANNER ─────────────────────────────────────────────────────────────
+
+def scan_long(ticker: str, slot: str, spy_ret: float, qqq_ret: float) -> dict | None:
+    """
+    Scan for LONG setups.
+    Returns a setup dict on pass, None on any failure.
+    """
+    try:
+        tk = yf.Ticker(ticker)
+        info = tk.fast_info
+
+        # Rule 1: Universe & Liquidity (pre-filter)
         mkt_cap = getattr(info, 'market_cap', None) or 0
         if mkt_cap < MIN_MARKET_CAP:
             return None
@@ -286,146 +433,338 @@ def scan_ticker(ticker, slot, spy_ret, qqq_ret):
         if adv < MIN_ADV:
             return None
 
-        daily = tk.history(period='3mo', interval='1d', auto_adjust=True)
-        if len(daily) < 15:
+        # Fetch all data
+        data = fetch_raw(ticker)
+        if data is None:
             return None
 
-        atr_pct = calc_atr_pct(daily)
+        price = data['price']
+        vwap = data['vwap']
+        ema9 = data['ema9']
+        ema20 = data['ema20']
+        rvol = data['rvol']
+        atr_pct = data['atr_pct']
+        climax = data['climax']
+        gap_pct = data['gap_pct']
+        ticker_ret = data['ticker_ret']
+        resistance = data['resistance']
+        res_label = data['res_label']
+
+        # Rule 1 continued
         if atr_pct < MIN_ATR_PCT:
             return None
 
-        # ── 5-minute intraday data ─────────────────────────────────────────
-        intra = tk.history(period='1d', interval='5m', auto_adjust=True)
-        if len(intra) < 6:
+        # Rule 2: Volume & Momentum
+        # 2a. Price > VWAP
+        if price <= vwap:
             return None
 
-        current_price = float(intra['Close'].iloc[-1])
-
-        # ── Rule 2: Volume & Momentum ──────────────────────────────────────
-        vwap = calc_vwap(intra)
-        if current_price <= vwap:
-            return None
-
-        rvol = calc_rvol(intra, float(adv))
+        # 2b. RVOL > 1.2x
         if rvol < MIN_RVOL:
             return None
 
-        closes       = intra['Close']
-        ema9_series  = ema(closes, 9)
-        ema20_series = ema(closes, 20)
-        ema9_val     = float(ema9_series.iloc[-1])
-        ema20_val    = float(ema20_series.iloc[-1])
-
-        if current_price <= ema9_val or current_price <= ema20_val:
+        # 2c. Price above 9-EMA and 20-EMA
+        if price <= ema9 or price <= ema20:
             return None
 
-        if is_climax_volume(intra):
+        # 2d. No climax volume
+        if climax:
             return None
 
-        # ── Rule 3: Context — Relative Strength ───────────────────────────
-        # Must be outperforming SPY or QQQ (either one suffices)
-        first_price = float(intra['Close'].iloc[0])
-        ticker_ret  = (current_price - first_price) / first_price * 100
+        # Rule 3: Context — Relative Strength
         if ticker_ret <= spy_ret and ticker_ret <= qqq_ret:
             return None
 
-        # Fetch headline for display only — no sentiment filter applied
+        # Get news
         sentiment_pct, headline = get_sentiment(ticker)
 
-        # ── Rule 4: Risk/Reward & Levels ──────────────────────────────────
-        prev_day_high = float(daily['High'].iloc[-2]) if len(daily) >= 2 else current_price
-        week52_high   = float(daily['High'].max())
-
-        premarket_high = None
-        try:
-            pm      = tk.history(period='1d', interval='1m', prepost=True, auto_adjust=True)
-            pm_est  = pm.copy()
-            pm_est.index = pm_est.index.tz_convert(EST)
-            pm_only = pm_est[pm_est.index.time < pd.Timestamp('09:30').time()]
-            if len(pm_only) > 0:
-                premarket_high = float(pm_only['High'].max())
-        except Exception:
-            pass
-
-        resistance, res_label = find_resistance(
-            current_price, prev_day_high, week52_high, premarket_high
-        )
+        # Rule 4: Risk/Reward & Levels
         if resistance is None:
             return None
 
-        runway_pct = (resistance - current_price) / current_price * 100
-        if runway_pct < MIN_RUNWAY_PCT:
+        long_runway = (resistance - price) / price * 100
+        if long_runway < MIN_RUNWAY_PCT:
             return None
 
-        risk_pct = (current_price - vwap) / current_price * 100
+        risk_pct = (price - vwap) / price * 100
         if risk_pct <= 0:
             return None
 
-        rr = runway_pct / risk_pct
+        rr = long_runway / risk_pct
         if rr < MIN_RR_RATIO:
             return None
 
-        # ── Additional context ─────────────────────────────────────────────
-        prev_close = float(daily['Close'].iloc[-2]) if len(daily) >= 2 else current_price
-        gap_pct    = (current_price - prev_close) / prev_close * 100
-
-        # Pre-market slot: require gap > 1% (relaxed from 2%)
+        # Pre-market slot: require gap > 1%
         if slot == 'pre_market' and gap_pct < 1.0:
             return None
 
-        # ── Entry trigger by time slot ─────────────────────────────────────
-        pm_level = f"${premarket_high:.2f}" if premarket_high else f"${resistance:.2f}"
+        # Entry trigger by time slot
+        pm_level = f"${data['prev_day_high']:.2f}" if data.get('prev_day_high') else f"${resistance:.2f}"
         entry_map = {
             'pre_market':  f"Breakout above pre-market high {pm_level}",
-            'macro_check': f"Sustained hold above ${current_price * 1.005:.2f} post-data print",
-            'true_open':   f"9-EMA hold (${ema9_val:.2f}) + volume expansion on next 5-min bar",
+            'macro_check': f"Sustained hold above ${price * 1.005:.2f} post-data print",
+            'true_open':   f"9-EMA hold (${ema9:.2f}) + volume expansion on next 5-min bar",
             'midday':      f"Break above ${resistance:.2f} with RVOL maintaining >{MIN_RVOL}x",
             'power_hour':  f"HOD breakout above ${resistance:.2f} in final hour",
         }
 
         return {
-            'ticker':        ticker,
-            'price':         current_price,
-            'vwap':          vwap,
-            'ema9':          ema9_val,
-            'ema20':         ema20_val,
-            'rvol':          rvol,
-            'atr_pct':       atr_pct,
-            'gap_pct':       gap_pct,
-            'ticker_ret':    ticker_ret,
-            'resistance':    resistance,
-            'res_label':     res_label,
-            'runway_pct':    runway_pct,
-            'stop':          vwap,
-            'risk_pct':      risk_pct,
-            'rr':            rr,
+            'ticker': ticker,
+            'price': price,
+            'vwap': vwap,
+            'ema9': ema9,
+            'ema20': ema20,
+            'rvol': rvol,
+            'atr_pct': atr_pct,
+            'gap_pct': gap_pct,
+            'ticker_ret': ticker_ret,
+            'resistance': resistance,
+            'res_label': res_label,
+            'mkt_cap_b': data['mkt_cap_b'],
+            'adv_m': data['adv_m'],
+            'runway_pct': long_runway,
+            'stop': vwap,
+            'risk_pct': risk_pct,
+            'rr': rr,
             'sentiment_pct': sentiment_pct,
-            'headline':      headline,
-            'entry':         entry_map.get(slot, f"Break above ${resistance:.2f}"),
-            'mkt_cap_b':     mkt_cap / 1e9,
-            'adv_m':         adv / 1e6,
+            'headline': headline,
+            'entry': entry_map.get(slot, f"Break above ${resistance:.2f}"),
+            'setup_type': 'long',
         }
 
-    except Exception:
+    except Exception as e:
+        return None
+
+
+# ─── SHORT SCANNER ────────────────────────────────────────────────────────────
+
+def scan_short(ticker: str, slot: str, spy_ret: float, qqq_ret: float) -> dict | None:
+    """
+    Scan for SHORT setups.
+    Returns a setup dict on pass, None on any failure.
+    """
+    try:
+        tk = yf.Ticker(ticker)
+        info = tk.fast_info
+
+        # Rule 1: Universe & Liquidity (pre-filter)
+        mkt_cap = getattr(info, 'market_cap', None) or 0
+        if mkt_cap < MIN_MARKET_CAP:
+            return None
+
+        adv = getattr(info, 'three_month_average_volume', None) or 0
+        if adv < MIN_ADV:
+            return None
+
+        # Fetch all data
+        data = fetch_raw(ticker)
+        if data is None:
+            return None
+
+        price = data['price']
+        vwap = data['vwap']
+        ema9 = data['ema9']
+        ema20 = data['ema20']
+        rvol = data['rvol']
+        atr_pct = data['atr_pct']
+        climax = data['climax']
+        gap_pct = data['gap_pct']
+        ticker_ret = data['ticker_ret']
+        support = data['support']
+        sup_label = data['sup_label']
+
+        # Rule 1 continued
+        if atr_pct < MIN_ATR_PCT:
+            return None
+
+        # Rule 2: Volume & Momentum (inverted for shorts)
+        # 2a. Price < VWAP
+        if price >= vwap:
+            return None
+
+        # 2b. RVOL > 1.2x
+        if rvol < MIN_RVOL:
+            return None
+
+        # 2c. Price below 9-EMA and 20-EMA
+        if price >= ema9 or price >= ema20:
+            return None
+
+        # 2d. No climax volume
+        if climax:
+            return None
+
+        # Rule 3: Context — Relative Strength (underperform BOTH SPY and QQQ)
+        if ticker_ret > spy_ret or ticker_ret > qqq_ret:
+            return None
+
+        # Get news
+        sentiment_pct, headline = get_sentiment(ticker)
+
+        # Rule 4: Risk/Reward & Levels (inverted for shorts)
+        if support is None:
+            return None
+
+        short_downside = (price - support) / price * 100
+        if short_downside < MIN_RUNWAY_PCT:
+            return None
+
+        risk_pct = (vwap - price) / price * 100
+        if risk_pct <= 0:
+            return None
+
+        rr = short_downside / risk_pct
+        if rr < MIN_RR_RATIO:
+            return None
+
+        # Pre-market slot: require gap < -1%
+        if slot == 'pre_market' and gap_pct > -1.0:
+            return None
+
+        # Entry trigger by time slot
+        entry_map = {
+            'pre_market':  f"Breakdown below pre-market low ${data['prev_day_low']:.2f}",
+            'macro_check': f"Breakdown below ${price * 0.995:.2f} post-data print",
+            'true_open':   f"9-EMA breakdown (${ema9:.2f}) + volume expansion on next 5-min bar",
+            'midday':      f"Break below ${support:.2f} with RVOL maintaining >{MIN_RVOL}x",
+            'power_hour':  f"LOD breakdown below ${support:.2f} in final hour",
+        }
+
+        return {
+            'ticker': ticker,
+            'price': price,
+            'vwap': vwap,
+            'ema9': ema9,
+            'ema20': ema20,
+            'rvol': rvol,
+            'atr_pct': atr_pct,
+            'gap_pct': gap_pct,
+            'ticker_ret': ticker_ret,
+            'support': support,
+            'sup_label': sup_label,
+            'mkt_cap_b': data['mkt_cap_b'],
+            'adv_m': data['adv_m'],
+            'downside_pct': short_downside,
+            'stop': vwap,
+            'risk_pct': risk_pct,
+            'rr': rr,
+            'sentiment_pct': sentiment_pct,
+            'headline': headline,
+            'entry': entry_map.get(slot, f"Break below ${support:.2f}"),
+            'setup_type': 'short',
+        }
+
+    except Exception as e:
+        return None
+
+
+# ─── MONITOR FUNCTION ─────────────────────────────────────────────────────────
+
+def fetch_monitor(ticker: str, spy_ret: float, qqq_ret: float) -> dict | None:
+    """
+    Fetch monitor data for a ticker (GOOGL, NVDA).
+    Returns a dict with ticker info and qualification checks.
+    """
+    try:
+        tk = yf.Ticker(ticker)
+        info = tk.fast_info
+
+        mkt_cap = getattr(info, 'market_cap', None) or 0
+        adv = getattr(info, 'three_month_average_volume', None) or 0
+
+        data = fetch_raw(ticker)
+        if data is None:
+            return None
+
+        price = data['price']
+        vwap = data['vwap']
+        ema9 = data['ema9']
+        ema20 = data['ema20']
+        rvol = data['rvol']
+        atr_pct = data['atr_pct']
+        ticker_ret = data['ticker_ret']
+        gap_pct = data['gap_pct']
+        resistance = data['resistance']
+        support = data['support']
+        mkt_cap_b = data['mkt_cap_b']
+        adv_m = data['adv_m']
+
+        sentiment_pct, headline = get_sentiment(ticker)
+
+        # Build long qualification checks
+        long_checks = [
+            ('Cap', f'${mkt_cap_b:.0f}B', '≥$20B', mkt_cap >= MIN_MARKET_CAP),
+            ('ADV', f'{adv_m:.1f}M', '≥2M', adv >= MIN_ADV),
+            ('ATR', f'{atr_pct:.1f}%', '≥1.5%', atr_pct >= MIN_ATR_PCT),
+            ('P>VWAP', f'${price:.2f}>${vwap:.2f}', '', price > vwap),
+            ('RVOL', f'{rvol:.1f}x', '≥1.2x', rvol >= MIN_RVOL),
+            ('EMAs↑', f'9E:{ema9:.0f} 20E:{ema20:.0f}', '', price > ema9 and price > ema20),
+            ('RS↑', f'{ticker_ret:+.1f}%', '>SPY/QQQ', ticker_ret > spy_ret or ticker_ret > qqq_ret),
+        ]
+
+        if resistance:
+            long_runway = (resistance - price) / price * 100
+            risk_pct = (price - vwap) / price * 100
+            rr = long_runway / risk_pct if risk_pct > 0 else 0
+            long_checks.extend([
+                ('Runway', f'{long_runway:.1f}%', '≥1%', long_runway >= MIN_RUNWAY_PCT),
+                ('R/R', f'1:{rr:.1f}', '≥1:1.5', rr >= MIN_RR_RATIO),
+            ])
+
+        # Build short qualification checks
+        short_checks = [
+            ('Cap', f'${mkt_cap_b:.0f}B', '≥$20B', mkt_cap >= MIN_MARKET_CAP),
+            ('ADV', f'{adv_m:.1f}M', '≥2M', adv >= MIN_ADV),
+            ('ATR', f'{atr_pct:.1f}%', '≥1.5%', atr_pct >= MIN_ATR_PCT),
+            ('P<VWAP', f'${price:.2f}<{vwap:.2f}', '', price < vwap),
+            ('RVOL', f'{rvol:.1f}x', '≥1.2x', rvol >= MIN_RVOL),
+            ('EMAs↓', f'9E:{ema9:.0f} 20E:{ema20:.0f}', '', price < ema9 and price < ema20),
+            ('RS↓', f'{ticker_ret:+.1f}%', '<SPY&QQQ', ticker_ret < spy_ret and ticker_ret < qqq_ret),
+        ]
+
+        if support:
+            short_downside = (price - support) / price * 100
+            risk_pct = (vwap - price) / price * 100
+            rr = short_downside / risk_pct if risk_pct > 0 else 0
+            short_checks.extend([
+                ('Downside', f'{short_downside:.1f}%', '≥1%', short_downside >= MIN_RUNWAY_PCT),
+                ('R/R', f'1:{rr:.1f}', '≥1:1.5', rr >= MIN_RR_RATIO),
+            ])
+
+        return {
+            'ticker': ticker,
+            'price': price,
+            'gap_pct': gap_pct,
+            'ticker_ret': ticker_ret,
+            'sentiment_pct': sentiment_pct,
+            'headline': headline,
+            'long_checks': long_checks,
+            'short_checks': short_checks,
+        }
+
+    except Exception as e:
         return None
 
 
 # ─── HTML GENERATOR ───────────────────────────────────────────────────────────
 
-def _format_card(s, color, spy_ret):
-    sent    = f"{s['sentiment_pct']:.0f}% Positive" if s['sentiment_pct'] is not None else 'N/A'
-    rr_str  = f"1:{s['rr']:.1f}"
+def _format_long_card(s: dict, color: str, spy_ret: float, qqq_ret: float) -> str:
+    sent = f"{s['sentiment_pct']:.0f}% Positive" if s['sentiment_pct'] is not None else 'N/A'
+    rr_str = f"1:{s['rr']:.1f}"
     gap_cls = 'gap-up' if s['gap_pct'] >= 0 else 'gap-down'
     gap_sym = '▲' if s['gap_pct'] >= 0 else '▼'
-    hl      = s['headline'] or 'Strong institutional momentum — no specific news catalyst identified.'
+    hl = s['headline'] or 'Strong institutional momentum — no specific news catalyst identified.'
 
     return f"""
-<div class="card" style="border-left-color:{color};">
+<div class="card long-card" style="border-left-color:{color};">
   <div class="card-header">
     <span class="ticker" style="color:{color};">{s['ticker']}</span>
     <span class="price">${s['price']:.2f}</span>
     <span class="badge {gap_cls}">{gap_sym} {abs(s['gap_pct']):.2f}%</span>
-    <span class="badge neutral">Cap ${s['mkt_cap_b']:.0f}B</span>
+  </div>
+
+  <div class="quals-row">
+    Cap ${s['mkt_cap_b']:.0f}B | ADV {s['adv_m']:.1f}M | ATR {s['atr_pct']:.1f}% | RVOL {s['rvol']:.1f}x | RS {s['ticker_ret']:+.1f}% vs SPY {spy_ret:+.1f}% | Runway {s['runway_pct']:.1f}% | R/R 1:{s['rr']:.1f}
   </div>
 
   <div class="grid-2">
@@ -478,22 +817,171 @@ def _format_card(s, color, spy_ret):
 </div>"""
 
 
-def build_html(setups, slot, scan_time, spy_ret, qqq_ret):
-    slot_info   = TIME_SLOTS[slot]
-    setup_count = len(setups)
+def _format_short_card(s: dict, color: str, spy_ret: float, qqq_ret: float) -> str:
+    sent = f"{s['sentiment_pct']:.0f}% Positive" if s['sentiment_pct'] is not None else 'N/A'
+    rr_str = f"1:{s['rr']:.1f}"
+    gap_cls = 'gap-up' if s['gap_pct'] >= 0 else 'gap-down'
+    gap_sym = '▲' if s['gap_pct'] >= 0 else '▼'
+    hl = s['headline'] or 'Institutional selling pressure — no specific news catalyst identified.'
 
-    cards_html = ''.join(
-        _format_card(s, CARD_COLORS[i % len(CARD_COLORS)], spy_ret)
-        for i, s in enumerate(setups)
+    return f"""
+<div class="card short-card" style="border-left-color:{color};">
+  <div class="card-header">
+    <span class="ticker" style="color:{color};">{s['ticker']}</span>
+    <span class="price">${s['price']:.2f}</span>
+    <span class="badge {gap_cls}">{gap_sym} {abs(s['gap_pct']):.2f}%</span>
+  </div>
+
+  <div class="quals-row">
+    Cap ${s['mkt_cap_b']:.0f}B | ADV {s['adv_m']:.1f}M | ATR {s['atr_pct']:.1f}% | RVOL {s['rvol']:.1f}x | RS {s['ticker_ret']:+.1f}% vs SPY {spy_ret:+.1f}% | Downside {s['downside_pct']:.1f}% | R/R 1:{s['rr']:.1f}
+  </div>
+
+  <div class="grid-2">
+    <div class="metric">
+      <div class="lbl">Price / VWAP</div>
+      <div class="val">${s['price']:.2f} / ${s['vwap']:.2f}</div>
+    </div>
+    <div class="metric">
+      <div class="lbl">Rel. Volume (RVOL)</div>
+      <div class="val hot">{s['rvol']:.2f}x normal</div>
+    </div>
+    <div class="metric">
+      <div class="lbl">9-EMA / 20-EMA (5m)</div>
+      <div class="val">${s['ema9']:.2f} / ${s['ema20']:.2f}</div>
+    </div>
+    <div class="metric">
+      <div class="lbl">ATR Volatility</div>
+      <div class="val">{s['atr_pct']:.2f}% of price</div>
+    </div>
+    <div class="metric">
+      <div class="lbl">Sentiment Score</div>
+      <div class="val">{sent}</div>
+    </div>
+    <div class="metric">
+      <div class="lbl">Weakness vs Market</div>
+      <div class="val hot">{s['ticker_ret']:+.2f}% vs SPY {spy_ret:+.2f}%</div>
+    </div>
+  </div>
+
+  <div class="catalyst-box">
+    <span class="section-lbl">THE CATALYST</span>
+    <p>{hl}</p>
+  </div>
+
+  <div class="trade-plan">
+    <span class="section-lbl">TRADE PLAN</span>
+    <div class="trade-row">
+      <span class="tl">Entry Trigger</span>
+      <span class="tv">{s['entry']}</span>
+    </div>
+    <div class="trade-row">
+      <span class="tl">Target ({s['sup_label']})</span>
+      <span class="tv green">${s['support']:.2f} &nbsp;(&minus;{s['downside_pct']:.1f}% downside)</span>
+    </div>
+    <div class="trade-row last">
+      <span class="tl">Hard Stop (VWAP)</span>
+      <span class="tv red">${s['stop']:.2f} &nbsp;(+{s['risk_pct']:.1f}% risk &rarr; {rr_str} R/R)</span>
+    </div>
+  </div>
+</div>"""
+
+
+def _format_monitor_card(m: dict, spy_ret: float, qqq_ret: float) -> str:
+    gap_cls = 'gap-up' if m['gap_pct'] >= 0 else 'gap-down'
+    gap_sym = '▲' if m['gap_pct'] >= 0 else '▼'
+    hl = m['headline'] or 'Monitoring price action and volatility.'
+    sent = f"{m['sentiment_pct']:.0f}% Positive" if m['sentiment_pct'] is not None else 'N/A'
+
+    long_badges = ''
+    for label, actual, threshold, passes in m['long_checks']:
+        badge_class = 'check-pass' if passes else 'check-fail'
+        long_badges += f'<span class="check-badge {badge_class}">{"✓" if passes else "✗"} {label} {actual}</span>'
+
+    short_badges = ''
+    for label, actual, threshold, passes in m['short_checks']:
+        badge_class = 'check-pass' if passes else 'check-fail'
+        short_badges += f'<span class="check-badge {badge_class}">{"✓" if passes else "✗"} {label} {actual}</span>'
+
+    return f"""
+<div class="card monitor-card" style="border-left-color:{MONITOR_CARD_COLOR};">
+  <div class="card-header">
+    <span class="ticker" style="color:{MONITOR_CARD_COLOR};">{m['ticker']}</span>
+    <span class="price">${m['price']:.2f}</span>
+    <span class="badge {gap_cls}">{gap_sym} {abs(m['gap_pct']):.2f}%</span>
+    <span class="badge neutral">{m['ticker_ret']:+.2f}%</span>
+  </div>
+
+  <div class="grid-2">
+    <div class="metric">
+      <div class="lbl">Current Price</div>
+      <div class="val">${m['price']:.2f}</div>
+    </div>
+    <div class="metric">
+      <div class="lbl">Today's Return</div>
+      <div class="val hot">{m['ticker_ret']:+.2f}%</div>
+    </div>
+    <div class="metric">
+      <div class="lbl">Sentiment</div>
+      <div class="val">{sent}</div>
+    </div>
+    <div class="metric">
+      <div class="lbl">Market Context</div>
+      <div class="val">SPY {spy_ret:+.2f}% | QQQ {qqq_ret:+.2f}%</div>
+    </div>
+  </div>
+
+  <div class="catalyst-box">
+    <span class="section-lbl">HEADLINE</span>
+    <p>{hl}</p>
+  </div>
+
+  <div class="checks-section">
+    <div class="checks-label">LONG Qualification</div>
+    <div class="checks-row">{long_badges}</div>
+  </div>
+
+  <div class="checks-section">
+    <div class="checks-label">SHORT Qualification</div>
+    <div class="checks-row">{short_badges}</div>
+  </div>
+</div>"""
+
+
+def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: str,
+               spy_ret: float, qqq_ret: float) -> str:
+    slot_info = TIME_SLOTS[slot]
+    long_count = len(longs)
+    short_count = len(shorts)
+
+    long_cards = ''.join(
+        _format_long_card(s, LONG_CARD_COLORS[i % len(LONG_CARD_COLORS)], spy_ret, qqq_ret)
+        for i, s in enumerate(longs)
     )
-
-    if not cards_html:
-        cards_html = """
+    if not long_cards:
+        long_cards = """
 <div class="no-setups">
   <div class="no-icon">&#9888;</div>
-  <div class="no-msg">No valid setups meet the criteria at this time.</div>
-  <div class="no-sub">Capital preservation is the priority. Stand aside and wait for the next scan.</div>
+  <div class="no-msg">No long setups meet the criteria.</div>
+  <div class="no-sub">Capital preservation is the priority.</div>
 </div>"""
+
+    short_cards = ''.join(
+        _format_short_card(s, SHORT_CARD_COLORS[i % len(SHORT_CARD_COLORS)], spy_ret, qqq_ret)
+        for i, s in enumerate(shorts)
+    )
+    if not short_cards:
+        short_cards = """
+<div class="no-setups">
+  <div class="no-icon">&#9888;</div>
+  <div class="no-msg">No short setups meet the criteria.</div>
+  <div class="no-sub">Capital preservation is the priority.</div>
+</div>"""
+
+    monitor_cards = ''.join(
+        _format_monitor_card(m, spy_ret, qqq_ret)
+        for m in monitors
+        if m is not None
+    )
 
     spy_color = '#00ff88' if spy_ret >= 0 else '#ff6b6b'
     qqq_color = '#00ff88' if qqq_ret >= 0 else '#ff6b6b'
@@ -507,86 +995,338 @@ def build_html(setups, slot, scan_time, spy_ret, qqq_ret):
   <title>Trading Scanner &mdash; {slot_info['label']}</title>
   <style>
     *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+
     body {{
-      background: #080b10; color: #c9d1d9;
+      background: #080b10;
+      color: #c9d1d9;
       font-family: 'Courier New', 'Consolas', monospace;
-      font-size: 14px; padding: 24px 16px 48px; min-height: 100vh;
+      font-size: 14px;
+      padding: 24px 16px 48px;
+      min-height: 100vh;
     }}
-    .header {{ text-align: center; margin-bottom: 36px; padding-bottom: 24px; border-bottom: 1px solid #1c2030; }}
+
+    /* ── Header ─────────────────────────────────────── */
+    .header {{
+      text-align: center;
+      margin-bottom: 36px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid #1c2030;
+    }}
     .header-badge {{
-      display: inline-block; background: #111827; border: 1px solid #2a3042;
-      border-radius: 20px; padding: 4px 14px; font-size: 10px; color: #6b7280;
-      letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px;
+      display: inline-block;
+      background: #111827;
+      border: 1px solid #2a3042;
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 10px;
+      color: #6b7280;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
     }}
-    h1 {{ font-size: 26px; font-weight: bold; color: #e6edf3; letter-spacing: 1px; margin-bottom: 6px; }}
-    .slot-label {{ font-size: 14px; color: #58a6ff; margin-bottom: 4px; }}
-    .focus-text {{ font-size: 12px; color: #6b7280; font-style: italic; margin-bottom: 14px; }}
-    .scan-meta {{ display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; font-size: 12px; color: #6b7280; }}
+    h1 {{
+      font-size: 26px;
+      font-weight: bold;
+      color: #e6edf3;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }}
+    .slot-label {{
+      font-size: 14px;
+      color: #58a6ff;
+      margin-bottom: 4px;
+    }}
+    .focus-text {{
+      font-size: 12px;
+      color: #6b7280;
+      font-style: italic;
+      margin-bottom: 14px;
+    }}
+    .scan-meta {{
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      font-size: 12px;
+      color: #6b7280;
+    }}
     .scan-meta .val {{ color: #e6edf3; }}
+
+    /* ── Container ──────────────────────────────────── */
     .container {{ max-width: 860px; margin: 0 auto; }}
-    .card {{
-      background: #0d1117; border: 1px solid #1c2030; border-left: 4px solid #00d4ff;
-      border-radius: 8px; padding: 22px 20px; margin-bottom: 24px;
+
+    /* ── Section Headers ────────────────────────────── */
+    .section-header {{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 42px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #1c2030;
+      font-size: 14px;
+      font-weight: bold;
+      color: #e6edf3;
+      letter-spacing: 1px;
     }}
-    .card-header {{ display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }}
-    .ticker {{ font-size: 28px; font-weight: bold; letter-spacing: 1.5px; }}
-    .price {{ font-size: 22px; color: #e6edf3; }}
-    .badge {{ padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; }}
-    .gap-up {{ background: #0d2b1a; color: #00ff88; }}
-    .gap-down {{ background: #2b0d0d; color: #ff6b6b; }}
-    .neutral {{ background: #1a1f2e; color: #8b949e; }}
-    .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }}
-    .metric {{ background: #111827; border-radius: 6px; padding: 10px 12px; }}
-    .lbl {{ font-size: 9px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }}
+    .section-header.long {{
+      color: #00ff88;
+      border-bottom-color: #00ff88;
+    }}
+    .section-header.short {{
+      color: #ff6b6b;
+      border-bottom-color: #ff6b6b;
+    }}
+    .section-header.monitor {{
+      color: #8b5cf6;
+      border-bottom-color: #8b5cf6;
+    }}
+    .section-header .count {{
+      background: rgba(255, 255, 255, 0.1);
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+    }}
+    .section-header .rules {{
+      margin-left: auto;
+      font-size: 11px;
+      color: #8b949e;
+      font-weight: normal;
+      letter-spacing: 0.5px;
+    }}
+
+    /* ── Cards ──────────────────────────────────────── */
+    .card {{
+      background: #0d1117;
+      border: 1px solid #1c2030;
+      border-left: 4px solid #00d4ff;
+      border-radius: 8px;
+      padding: 22px 20px;
+      margin-bottom: 24px;
+    }}
+    .card-header {{
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }}
+    .ticker {{
+      font-size: 28px;
+      font-weight: bold;
+      letter-spacing: 1.5px;
+    }}
+    .price {{
+      font-size: 22px;
+      color: #e6edf3;
+    }}
+    .badge {{
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+    }}
+    .gap-up    {{ background: #0d2b1a; color: #00ff88; }}
+    .gap-down  {{ background: #2b0d0d; color: #ff6b6b; }}
+    .neutral   {{ background: #1a1f2e; color: #8b949e; }}
+
+    /* ── Quals Row ───────────────────────────────────── */
+    .quals-row {{
+      background: #111827;
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      font-size: 11px;
+      color: #8b949e;
+      line-height: 1.5;
+      overflow-x: auto;
+    }}
+
+    /* ── Metrics grid ────────────────────────────────── */
+    .grid-2 {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }}
+    .metric {{
+      background: #111827;
+      border-radius: 6px;
+      padding: 10px 12px;
+    }}
+    .lbl {{
+      font-size: 9px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 5px;
+    }}
     .val {{ font-size: 14px; color: #e6edf3; }}
     .val.hot {{ color: #ffcc00; }}
-    .catalyst-box {{ background: #111827; border-radius: 6px; padding: 12px 14px; margin-bottom: 14px; }}
-    .section-lbl {{ display: block; font-size: 9px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 7px; }}
-    .catalyst-box p {{ font-size: 13px; color: #c9d1d9; line-height: 1.6; }}
-    .trade-plan {{ background: #080b10; border: 1px solid #1c2030; border-radius: 6px; padding: 14px 16px; }}
+
+    /* ── Catalyst ────────────────────────────────────── */
+    .catalyst-box {{
+      background: #111827;
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }}
+    .section-lbl {{
+      display: block;
+      font-size: 9px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 7px;
+    }}
+    .catalyst-box p {{
+      font-size: 13px;
+      color: #c9d1d9;
+      line-height: 1.6;
+    }}
+
+    /* ── Trade plan ─────────────────────────────────── */
+    .trade-plan {{
+      background: #080b10;
+      border: 1px solid #1c2030;
+      border-radius: 6px;
+      padding: 14px 16px;
+    }}
     .trade-plan .section-lbl {{ margin-bottom: 10px; }}
-    .trade-row {{ display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #111827; gap: 16px; }}
+    .trade-row {{
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 8px 0;
+      border-bottom: 1px solid #111827;
+      gap: 16px;
+    }}
     .trade-row.last {{ border-bottom: none; }}
     .tl {{ color: #6b7280; white-space: nowrap; font-size: 12px; }}
     .tv {{ color: #e6edf3; text-align: right; font-size: 12px; }}
     .green {{ color: #00ff88; }}
-    .red {{ color: #ff6b6b; }}
-    .no-setups {{ text-align: center; padding: 70px 20px; border: 1px dashed #1c2030; border-radius: 8px; }}
+    .red   {{ color: #ff6b6b; }}
+
+    /* ── Checks section (monitors) ────────────────────── */
+    .checks-section {{
+      background: #111827;
+      border-radius: 6px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }}
+    .checks-label {{
+      font-size: 9px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }}
+    .checks-row {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+    .check-badge {{
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: bold;
+    }}
+    .check-pass {{
+      background: #0d2b1a;
+      color: #00ff88;
+    }}
+    .check-fail {{
+      background: #2b0d0d;
+      color: #ff6b6b;
+    }}
+
+    /* ── No setups ───────────────────────────────────── */
+    .no-setups {{
+      text-align: center;
+      padding: 70px 20px;
+      border: 1px dashed #1c2030;
+      border-radius: 8px;
+    }}
     .no-icon {{ font-size: 44px; margin-bottom: 16px; color: #ffcc00; }}
-    .no-msg {{ font-size: 16px; color: #8b949e; margin-bottom: 8px; }}
-    .no-sub {{ font-size: 13px; color: #4b5563; }}
-    .footer {{ text-align: center; margin-top: 48px; padding-top: 20px; border-top: 1px solid #1c2030; font-size: 11px; color: #374151; line-height: 1.8; }}
+    .no-msg  {{ font-size: 16px; color: #8b949e; margin-bottom: 8px; }}
+    .no-sub  {{ font-size: 13px; color: #4b5563; }}
+
+    /* ── Footer ─────────────────────────────────────── */
+    .footer {{
+      text-align: center;
+      margin-top: 48px;
+      padding-top: 20px;
+      border-top: 1px solid #1c2030;
+      font-size: 11px;
+      color: #374151;
+      line-height: 1.8;
+    }}
+
+    /* ── Mobile ─────────────────────────────────────── */
     @media (max-width: 580px) {{
-      .grid-2 {{ grid-template-columns: 1fr; }}
-      .trade-row {{ flex-direction: column; gap: 3px; }}
-      .tv {{ text-align: left; }}
-      h1 {{ font-size: 20px; }}
-      .ticker {{ font-size: 22px; }}
+      .grid-2        {{ grid-template-columns: 1fr; }}
+      .trade-row     {{ flex-direction: column; gap: 3px; }}
+      .tv            {{ text-align: left; }}
+      h1             {{ font-size: 20px; }}
+      .ticker        {{ font-size: 22px; }}
+      .quals-row     {{ font-size: 10px; }}
+      .section-header {{
+        flex-direction: column;
+        align-items: flex-start;
+      }}
+      .section-header .rules {{
+        margin-left: 0;
+        margin-top: 8px;
+      }}
     }}
   </style>
 </head>
 <body>
   <div class="container">
+
     <div class="header">
       <div class="header-badge">Elite Day Trading Research</div>
-      <h1>&#9650; Momentum Scanner</h1>
+      <h1>&#9650; ▼ Momentum Scanner</h1>
       <div class="slot-label">{slot_info['label']}</div>
       <div class="focus-text">Focus: {slot_info['focus']}</div>
       <div class="scan-meta">
         <div>Scanned <span class="val">{scan_time}</span></div>
         <div>SPY <span class="val" style="color:{spy_color}">{spy_ret:+.2f}%</span></div>
         <div>QQQ <span class="val" style="color:{qqq_color}">{qqq_ret:+.2f}%</span></div>
-        <div>Setups Found <span class="val">{setup_count}</span></div>
+        <div>Long <span class="val">{long_count}</span></div>
+        <div>Short <span class="val">{short_count}</span></div>
       </div>
     </div>
-    {cards_html}
+
+    <!-- LONG SETUPS SECTION -->
+    <div class="section-header long">
+      <span>▲ LONG SETUPS ({long_count} found)</span>
+      <span class="rules">Price&gt;VWAP · RVOL&gt;1.2x · Above 9/20-EMA · RS outperforms SPY or QQQ · Runway≥1% · R/R≥1:1.5</span>
+    </div>
+    {long_cards}
+
+    <!-- SHORT SETUPS SECTION -->
+    <div class="section-header short">
+      <span>▼ SHORT SETUPS ({short_count} found)</span>
+      <span class="rules">Price&lt;VWAP · RVOL&gt;1.2x · Below 9/20-EMA · RS underperforms SPY and QQQ · Downside≥1% · R/R≥1:1.5</span>
+    </div>
+    {short_cards}
+
+    <!-- MONITOR SECTION -->
+    <div class="section-header monitor">
+      <span>◉ MARKET MONITOR — GOOGL & NVDA</span>
+    </div>
+    {monitor_cards}
+
     <div class="footer">
       Page auto-refreshes every 5 minutes &nbsp;&bull;&nbsp;
       Powered by yfinance + Alpha Vantage &nbsp;&bull;&nbsp;
-      Rules: Cap&gt;$20B &middot; ADV&gt;2M &middot; ATR&ge;1.5% &middot; Price&gt;VWAP
-      &middot; RVOL&gt;1.2x &middot; 9/20-EMA &middot; Runway&ge;1% &middot; R/R&ge;1:1.5<br>
+      Rules: Cap&gt;$20B &middot; ADV&gt;2M &middot; ATR&ge;1.5% &middot; RVOL&gt;1.2x &middot; Runway&ge;1% &middot; R/R&ge;1:1.5<br>
       <strong>For informational &amp; research purposes only. Not financial advice. All trading involves substantial risk of loss.</strong>
     </div>
+
   </div>
 </body>
 </html>"""
@@ -606,6 +1346,7 @@ def main():
     print(f"  Focus     : {slot_info['focus']}")
     print(f"{'=' * 64}\n")
 
+    # ── SPY / QQQ baseline returns ─────────────────────────────────────────
     spy_ret, qqq_ret = 0.0, 0.0
     for sym in ['SPY', 'QQQ']:
         try:
@@ -621,37 +1362,65 @@ def main():
 
     print(f"  SPY: {spy_ret:+.2f}%   QQQ: {qqq_ret:+.2f}%\n")
 
+    # ── Load universe ──────────────────────────────────────────────────────
     universe = get_universe()
     print(f"  Scanning {len(universe)} tickers...\n")
 
-    setups = []
+    # ── Scan each ticker for LONG and SHORT ────────────────────────────────
+    longs: list = []
+    shorts: list = []
+
     for i, ticker in enumerate(universe):
-        result = scan_ticker(ticker, slot, spy_ret, qqq_ret)
-        if result:
-            setups.append(result)
+        long_result = scan_long(ticker, slot, spy_ret, qqq_ret)
+        if long_result:
+            longs.append(long_result)
             print(
-                f"  ✓ SETUP: {ticker:<6}  "
-                f"Price=${result['price']:.2f}  "
-                f"RVOL={result['rvol']:.1f}x  "
-                f"Runway={result['runway_pct']:.1f}%  "
-                f"R/R=1:{result['rr']:.1f}"
+                f"  ✓ LONG:  {ticker:<6}  "
+                f"Price=${long_result['price']:.2f}  "
+                f"RVOL={long_result['rvol']:.1f}x  "
+                f"Runway={long_result['runway_pct']:.1f}%  "
+                f"R/R=1:{long_result['rr']:.1f}"
             )
+
+        short_result = scan_short(ticker, slot, spy_ret, qqq_ret)
+        if short_result:
+            shorts.append(short_result)
+            print(
+                f"  ✓ SHORT: {ticker:<6}  "
+                f"Price=${short_result['price']:.2f}  "
+                f"RVOL={short_result['rvol']:.1f}x  "
+                f"Downside={short_result['downside_pct']:.1f}%  "
+                f"R/R=1:{short_result['rr']:.1f}"
+            )
+
+        # Gentle rate limiting
         if (i + 1) % 25 == 0:
             time.sleep(2)
 
-    setups.sort(key=lambda x: x['rvol'], reverse=True)
+    # Sort by RVOL (strongest conviction first)
+    longs.sort(key=lambda x: x['rvol'], reverse=True)
+    shorts.sort(key=lambda x: x['rvol'], reverse=True)
 
     print(f"\n{'=' * 64}")
-    print(f"  Scan complete — {len(setups)} setup(s) found.")
+    print(f"  Scan complete — {len(longs)} long setup(s), {len(shorts)} short setup(s) found.")
     print(f"{'=' * 64}\n")
 
-    html        = build_html(setups, slot, scan_time, spy_ret, qqq_ret)
+    # ── Fetch monitor data for GOOGL and NVDA ─────────────────────────────
+    monitors = []
+    for ticker in MONITOR_TICKERS:
+        print(f"  Fetching monitor data for {ticker}...")
+        monitor_data = fetch_monitor(ticker, spy_ret, qqq_ret)
+        if monitor_data:
+            monitors.append(monitor_data)
+
+    # ── Write HTML output ──────────────────────────────────────────────────
+    html        = build_html(longs, shorts, monitors, slot, scan_time, spy_ret, qqq_ret)
     output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'index.html')
 
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(html)
 
-    print(f"  ✓ index.html written ({len(html):,} bytes) → {output_path}")
+    print(f"\n  ✓ index.html written ({len(html):,} bytes) → {output_path}\n")
 
 
 if __name__ == '__main__':
