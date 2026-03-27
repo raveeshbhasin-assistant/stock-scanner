@@ -347,7 +347,7 @@ def fetch_raw(ticker: str) -> dict | None:
             intra_5d.index = intra_5d.index.tz_convert(EST)
             last_date = intra_5d.index[-1].strftime("%Y-%m-%d")
             intra = intra_5d[intra_5d.index.strftime("%Y-%m-%d") == last_date]
-            if len(intra) < 6:
+            if len(intra) < 2:
                 print(f"  [WARN] {ticker}: filtered last-day slice too small ({len(intra)} bars)")
                 return None
             print(f"  [INFO] {ticker}: using {last_date} session data ({len(intra)} bars)")
