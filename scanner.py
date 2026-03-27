@@ -1505,9 +1505,7 @@ def main():
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(html)
 
-    print(f"
-  ✓ index.html written ({len(html):,} bytes) → {output_path}
-")
+    print(f"\n  ✓ index.html written ({len(html):,} bytes) → {output_path}\n")
 
 
 if __name__ == '__main__':
