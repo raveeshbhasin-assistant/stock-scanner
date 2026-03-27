@@ -1498,15 +1498,16 @@ def main():
     print(f"  Scan complete — {len(longs)} long setup(s), {len(shorts)} short setup(s) found.")
     print(f"{'=' * 64}\n")
 
-    # ── Fetch monitor data for GOOGL and NVDA ─────────────────────────────
-    monitors = []
-    for ticker in MONITOR_TICKERS:
-        print(f"  Fetching monitor data for {ticker}...")
-        monitor_data = fetch_monitor(ticker, spy_ret, qqq_ret)
-        if monitor_data:
-            monitors.append(monitor_data)
+    # ── Write HTML output ──────────────────────────────────────────────────────
+    html        = build_html(longs, shorts, monitors, slot, scan_time, spy_ret, qqq_ret)
+    output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'index.html')
 
-    # ── Write HTML output ────────────────────────────────────l):,} bytes) → {output_path}\n")
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(html)
+
+    print(f"
+  ✓ index.html written ({len(html):,} bytes) → {output_path}
+")
 
 
 if __name__ == '__main__':
