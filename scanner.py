@@ -912,9 +912,9 @@ def _ticker_logo(ticker: str, color: str) -> str:
 
 def _format_long_card(s: dict, color: str, spy_ret: float, qqq_ret: float) -> str:
     sent     = f"{s['sentiment_pct']:.0f}% Positive" if s['sentiment_pct'] is not None else 'N/A'
-    sent_col = ('#00d084' if (s['sentiment_pct'] or 0) >= 60
-                else ('#f59e0b' if (s['sentiment_pct'] or 0) >= 40 else '#ff4b5a')
-                if s['sentiment_pct'] is not None else 'rgba(240,242,247,0.3)')
+    sent_col = ('#00e68a' if (s['sentiment_pct'] or 0) >= 60
+                else ('#ffb020' if (s['sentiment_pct'] or 0) >= 40 else '#ff5166')
+                if s['sentiment_pct'] is not None else 'rgba(232,236,244,0.28)')
     rr_str   = f"1:{s['rr']:.1f}"
     gap_cls  = 'badge-up' if s['gap_pct'] >= 0 else 'badge-dn'
     gap_sym  = '▲' if s['gap_pct'] >= 0 else '▼'
@@ -946,7 +946,7 @@ def _format_long_card(s: dict, color: str, spy_ret: float, qqq_ret: float) -> st
   </div>
 
   <div class="tp-box">
-    <div class="tp-eyebrow">Trade Plan</div>
+    <div class="tp-eyebrow">▎ Trade Plan</div>
     <div class="tp-row">
       <span class="tp-icon ti-entry">➜</span>
       <span class="tp-key">ENTER</span>
@@ -988,9 +988,9 @@ def _format_long_card(s: dict, color: str, spy_ret: float, qqq_ret: float) -> st
 
 def _format_short_card(s: dict, color: str, spy_ret: float, qqq_ret: float) -> str:
     sent     = f"{s['sentiment_pct']:.0f}% Positive" if s['sentiment_pct'] is not None else 'N/A'
-    sent_col = ('#00d084' if (s['sentiment_pct'] or 0) >= 60
-                else ('#f59e0b' if (s['sentiment_pct'] or 0) >= 40 else '#ff4b5a')
-                if s['sentiment_pct'] is not None else 'rgba(240,242,247,0.3)')
+    sent_col = ('#00e68a' if (s['sentiment_pct'] or 0) >= 60
+                else ('#ffb020' if (s['sentiment_pct'] or 0) >= 40 else '#ff5166')
+                if s['sentiment_pct'] is not None else 'rgba(232,236,244,0.28)')
     rr_str   = f"1:{s['rr']:.1f}"
     gap_cls  = 'badge-up' if s['gap_pct'] >= 0 else 'badge-dn'
     gap_sym  = '▲' if s['gap_pct'] >= 0 else '▼'
@@ -1022,7 +1022,7 @@ def _format_short_card(s: dict, color: str, spy_ret: float, qqq_ret: float) -> s
   </div>
 
   <div class="tp-box">
-    <div class="tp-eyebrow">Trade Plan</div>
+    <div class="tp-eyebrow">▎ Trade Plan</div>
     <div class="tp-row">
       <span class="tp-icon ti-entry">➜</span>
       <span class="tp-key">ENTER</span>
@@ -1073,15 +1073,14 @@ def _format_monitor_card(m: dict, spy_ret: float, qqq_ret: float) -> str:
     session_active = m.get('session_active', True)
 
     status_map = {
-        'LIVE':       ('#00d084', 'rgba(0,208,132,0.12)'),
-        'AFTER HRS':  ('#f59e0b', 'rgba(245,158,11,0.12)'),
-        'PRE-MKT':    ('#60a5fa', 'rgba(96,165,250,0.12)'),
-        'PREV CLOSE': ('rgba(240,242,247,0.35)', 'rgba(255,255,255,0.06)'),
+        'LIVE':       ('#00e68a', 'rgba(0,230,138,0.15)'),
+        'AFTER HRS':  ('#ffb020', 'rgba(255,176,32,0.15)'),
+        'PRE-MKT':    ('#4d9fff', 'rgba(77,159,255,0.15)'),
+        'PREV CLOSE': ('rgba(232,236,244,0.35)', 'rgba(255,255,255,0.06)'),
     }
-    st_fg, st_bg = status_map.get(market_status, ('rgba(240,242,247,0.35)', 'rgba(255,255,255,0.06)'))
+    st_fg, st_bg = status_map.get(market_status, ('rgba(232,236,244,0.35)', 'rgba(255,255,255,0.06)'))
     status_badge = (
-        f'<span style="background:{st_bg};color:{st_fg};border:1px solid {st_fg};'
-        f'border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:1px;">'
+        f'<span class="status-badge" style="background:{st_bg};color:{st_fg};border:1px solid {st_fg};">'
         f'{market_status}</span>'
     )
 
@@ -1101,7 +1100,7 @@ def _format_monitor_card(m: dict, spy_ret: float, qqq_ret: float) -> str:
     ah_pill = ''
     if ah_price is not None:
         ah_chg  = (ah_price - m['price']) / m['price'] * 100
-        ah_col  = '#00d084' if ah_chg >= 0 else '#ff4b5a'
+        ah_col  = '#00e68a' if ah_chg >= 0 else '#ff5166'
         ah_sign = '+' if ah_chg >= 0 else ''
         ah_pill = (f'<div class="pill"><span class="pl">PREV CLOSE</span>'
                    f'<span class="pv">${m["price"]:.2f}</span></div>'
@@ -1209,8 +1208,8 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
         for m in monitors if m is not None
     )
 
-    spy_col = '#00d084' if spy_ret >= 0 else '#ff4b5a'
-    qqq_col = '#00d084' if qqq_ret >= 0 else '#ff4b5a'
+    spy_col = '#00e68a' if spy_ret >= 0 else '#ff5166'
+    qqq_col = '#00e68a' if qqq_ret >= 0 else '#ff5166'
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -1225,19 +1224,20 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     /* ── Reset ──────────────────────────────── */
     *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
     :root {{
-      --bg:      #07090e;
-      --s1:      #0d1018;
-      --s2:      #141820;
-      --s3:      #1b2130;
+      --bg:      #080b12;
+      --s1:      #0f1420;
+      --s2:      #161d2e;
+      --s3:      #1e2740;
       --border:  rgba(255,255,255,0.06);
-      --t1:      #f0f2f7;
-      --t2:      rgba(240,242,247,0.55);
-      --t3:      rgba(240,242,247,0.28);
-      --green:   #00d084;
-      --red:     #ff4b5a;
-      --amber:   #f59e0b;
-      --blue:    #60a5fa;
-      --purple:  #a78bfa;
+      --border-accent: rgba(255,255,255,0.10);
+      --t1:      #e8ecf4;
+      --t2:      rgba(232,236,244,0.55);
+      --t3:      rgba(232,236,244,0.28);
+      --green:   #00e68a;
+      --red:     #ff5166;
+      --blue:    #4d9fff;
+      --amber:   #ffb020;
+      --purple:  #9d7aff;
       --r:       12px;
       --r-sm:    8px;
     }}
@@ -1252,14 +1252,14 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     }}
 
     /* ── Layout ─────────────────────────────── */
-    .wrap {{ max-width: 920px; margin: 0 auto; }}
+    .wrap {{ max-width: 1000px; margin: 0 auto; }}
 
     /* ── Page Header ────────────────────────── */
     .pg-header {{
       text-align: center;
-      padding: 52px 0 40px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 52px;
+      padding: 60px 0 44px;
+      border-bottom: 1px solid var(--border-accent);
+      margin-bottom: 56px;
     }}
     .pg-eyebrow {{
       font-size: 10px;
@@ -1267,18 +1267,22 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       letter-spacing: 3px;
       text-transform: uppercase;
       color: var(--t3);
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }}
     .pg-title {{
-      font-size: 38px;
+      font-size: 42px;
       font-weight: 700;
-      letter-spacing: -1px;
+      letter-spacing: -1.2px;
       color: var(--t1);
-      margin-bottom: 10px;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, var(--t1) 0%, rgba(232,236,244,0.8) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }}
     .pg-slot {{
       font-size: 16px;
-      font-weight: 500;
+      font-weight: 600;
       color: var(--blue);
       margin-bottom: 6px;
     }}
@@ -1286,37 +1290,40 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       font-size: 13px;
       color: var(--t2);
       font-style: italic;
-      margin-bottom: 30px;
+      margin-bottom: 32px;
     }}
     .pg-meta {{
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
-      gap: 28px;
+      gap: 32px;
     }}
-    .meta-item {{ font-size: 13px; color: var(--t2); }}
-    .meta-val  {{ font-weight: 600; color: var(--t1); }}
+    .meta-item {{ font-size: 12px; color: var(--t2); }}
+    .meta-val  {{ font-weight: 700; color: var(--t1); }}
 
     /* ── Section Heads ──────────────────────── */
     .sec-head {{
       display: flex;
       align-items: center;
-      gap: 14px;
-      margin-top: 60px;
-      margin-bottom: 24px;
+      gap: 12px;
+      margin-top: 64px;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--border);
     }}
     .sec-head-title {{
-      font-size: 19px;
+      font-size: 22px;
       font-weight: 700;
-      letter-spacing: -0.3px;
+      letter-spacing: -0.4px;
     }}
     .sec-head-count {{
-      background: var(--s2);
-      border: 1px solid var(--border);
+      background: var(--s3);
+      border: 1px solid var(--border-accent);
       border-radius: 20px;
-      padding: 3px 13px;
-      font-size: 12px;
-      font-weight: 600;
+      padding: 4px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
       color: var(--t2);
     }}
     .sec-head-line {{ flex: 1; height: 1px; background: var(--border); }}
@@ -1324,14 +1331,27 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     .sec-head.short   .sec-head-title {{ color: var(--red);    }}
     .sec-head.monitor .sec-head-title {{ color: var(--purple); }}
 
+    /* ── Card Grid ──────────────────────────── */
+    .card-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+      gap: 24px;
+      margin-bottom: 12px;
+    }}
+
     /* ── Cards ──────────────────────────────── */
     .card {{
       background: var(--s1);
       border: 1px solid var(--border);
-      border-top: 2.5px solid var(--cc, var(--blue));
+      border-left: 4px solid var(--cc, var(--blue));
       border-radius: var(--r);
       padding: 24px;
-      margin-bottom: 20px;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }}
+    .card:hover {{
+      border-color: var(--border-accent);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }}
 
     /* ── Card top row ───────────────────────── */
@@ -1341,127 +1361,129 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       gap: 14px;
       margin-bottom: 20px;
     }}
-    .logo-wrap {{ width: 42px; height: 42px; flex-shrink: 0; position: relative; }}
+    .logo-wrap {{ width: 48px; height: 48px; flex-shrink: 0; position: relative; }}
     .logo-img  {{
-      width: 42px; height: 42px;
+      width: 48px; height: 48px;
       border-radius: 10px;
       object-fit: contain;
-      background: #fff;
       display: block;
+      background: rgba(255,255,255,0.03);
     }}
     .logo-fallback {{
-      width: 42px; height: 42px;
+      width: 48px; height: 48px;
       border-radius: 10px;
       align-items: center;
       justify-content: center;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       letter-spacing: 0.5px;
+      display: flex;
     }}
     .card-id {{ flex: 1; min-width: 0; }}
     .card-ticker {{
-      font-size: 27px;
+      font-size: 28px;
       font-weight: 700;
       color: var(--cc, var(--t1));
-      letter-spacing: -0.5px;
-      line-height: 1.1;
+      letter-spacing: -0.6px;
+      line-height: 1;
     }}
     .card-dir {{
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1.8px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 2px;
       text-transform: uppercase;
-      margin-top: 2px;
+      margin-top: 4px;
     }}
     .long-dir    {{ color: var(--green);  }}
     .short-dir   {{ color: var(--red);    }}
     .monitor-dir {{ color: var(--purple); }}
     .card-price-grp {{ text-align: right; flex-shrink: 0; }}
     .card-price {{
-      font-size: 25px;
-      font-weight: 600;
+      font-size: 28px;
+      font-weight: 700;
       color: var(--t1);
-      letter-spacing: -0.5px;
-      line-height: 1.1;
+      letter-spacing: -0.6px;
+      line-height: 1;
     }}
     .gbadge {{
       display: inline-block;
-      padding: 3px 9px;
-      border-radius: 20px;
-      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 10px;
       font-weight: 700;
-      margin-top: 4px;
+      margin-top: 6px;
     }}
-    .badge-up {{ background: rgba(0,208,132,0.13); color: var(--green); }}
-    .badge-dn {{ background: rgba(255,75,90,0.13);  color: var(--red);  }}
+    .badge-up {{ background: rgba(0,230,138,0.15); color: var(--green); }}
+    .badge-dn {{ background: rgba(255,81,102,0.15);  color: var(--red);  }}
 
     /* ── Trade Plan Box ─────────────────────── */
     .tp-box {{
-      background: var(--s2);
+      background: linear-gradient(135deg, rgba(0,230,138,0.08) 0%, rgba(77,159,255,0.04) 100%);
       border: 1px solid var(--border);
+      border-left: 3px solid var(--cc, var(--blue));
       border-radius: var(--r-sm);
-      padding: 16px 18px;
-      margin-bottom: 16px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
     }}
     .tp-eyebrow {{
       font-size: 9px;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: 2.5px;
       text-transform: uppercase;
-      color: var(--t3);
-      margin-bottom: 12px;
+      color: var(--t2);
+      margin-bottom: 14px;
     }}
     .tp-row {{
       display: flex;
       align-items: baseline;
       gap: 10px;
-      padding: 8px 0;
+      padding: 10px 0;
       border-bottom: 1px solid var(--border);
       font-size: 13px;
     }}
     .tp-row.tp-last {{ border-bottom: none; padding-bottom: 0; }}
-    .tp-icon  {{ width: 18px; text-align: center; flex-shrink: 0; font-size: 12px; }}
+    .tp-icon  {{ width: 16px; text-align: center; flex-shrink: 0; font-size: 14px; }}
     .ti-entry  {{ color: var(--blue);  }}
     .ti-target {{ color: var(--green); }}
     .ti-stop   {{ color: var(--red);   }}
     .tp-key {{
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1.2px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
-      color: var(--t2);
+      color: var(--t3);
       width: 52px;
       flex-shrink: 0;
     }}
-    .tp-val   {{ flex: 1; color: var(--t1); font-weight: 500; font-size: 13px; }}
+    .tp-val   {{ flex: 1; color: var(--t1); font-weight: 600; font-size: 13px; }}
     .tp-g     {{ color: var(--green); }}
     .tp-r     {{ color: var(--red);   }}
-    .tp-muted {{ font-size: 11px; font-weight: 400; color: var(--t2); }}
+    .tp-muted {{ font-size: 11px; font-weight: 400; color: var(--t3); }}
 
     /* ── Metric Pills ───────────────────────── */
     .pills {{
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+      margin-bottom: 18px;
     }}
     .pill {{
-      background: var(--s3);
+      background: var(--s2);
       border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 5px 12px;
+      border-radius: 8px;
+      padding: 10px 12px;
       display: flex;
-      align-items: center;
-      gap: 6px;
+      flex-direction: column;
+      gap: 2px;
     }}
     .pl {{
-      font-size: 8px;
-      font-weight: 700;
+      font-size: 7px;
+      font-weight: 800;
       letter-spacing: 1.2px;
       text-transform: uppercase;
       color: var(--t3);
     }}
-    .pv {{ font-size: 13px; font-weight: 600; color: var(--t1); }}
+    .pv {{ font-size: 13px; font-weight: 700; color: var(--t1); }}
     .pv-hi {{ color: var(--amber); }}
 
     /* ── Chart ──────────────────────────────── */
@@ -1469,20 +1491,21 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       background: var(--s2);
       border: 1px solid var(--border);
       border-radius: var(--r-sm);
-      padding: 12px 12px 8px;
-      margin-bottom: 16px;
+      padding: 14px;
+      margin-bottom: 18px;
       overflow: hidden;
     }}
     .chart-legend {{
       display: flex;
-      gap: 16px;
-      margin-top: 6px;
+      gap: 18px;
+      margin-top: 8px;
       padding-left: 2px;
+      flex-wrap: wrap;
     }}
     .cleg       {{ font-size: 10px; font-weight: 500; color: var(--t2); }}
-    .cleg-vwap  {{ color: rgba(245,158,11,0.9); }}
-    .cleg-ema9  {{ color: rgba(96,165,250,0.85); }}
-    .cleg-ema20 {{ color: rgba(100,116,139,0.7); }}
+    .cleg-vwap  {{ color: rgba(255,176,32,0.9); }}
+    .cleg-ema9  {{ color: rgba(77,159,255,0.85); }}
+    .cleg-ema20 {{ color: rgba(100,116,139,0.6); }}
 
     /* ── Catalyst ───────────────────────────── */
     .cat-box {{
@@ -1492,8 +1515,8 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       padding: 14px 16px;
     }}
     .sec-lbl {{
-      font-size: 9px;
-      font-weight: 700;
+      font-size: 8px;
+      font-weight: 800;
       letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--t3);
@@ -1502,7 +1525,22 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     .cat-text {{
       font-size: 13px;
       color: var(--t2);
-      line-height: 1.65;
+      line-height: 1.6;
+    }}
+
+    /* ── Status Badge ───────────────────────── */
+    .status-badge {{
+      border-radius: 6px;
+      padding: 4px 11px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      animation: pulse 2s infinite;
+    }}
+    @keyframes pulse {{
+      0%, 100% {{ opacity: 1; }}
+      50% {{ opacity: 0.6; }}
     }}
 
     /* ── Checks (Monitor) ───────────────────── */
@@ -1516,79 +1554,80 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     .checks-row {{
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 8px;
       margin-top: 10px;
     }}
     .cbadge {{
-      padding: 4px 10px;
-      border-radius: 5px;
-      font-size: 10px;
+      padding: 5px 11px;
+      border-radius: 6px;
+      font-size: 9px;
       font-weight: 700;
       letter-spacing: 0.2px;
     }}
-    .cbp {{ background: rgba(0,208,132,0.12); color: var(--green); border: 1px solid rgba(0,208,132,0.22); }}
-    .cbf {{ background: rgba(255,75,90,0.10);  color: var(--red);   border: 1px solid rgba(255,75,90,0.20);  }}
+    .cbp {{ background: rgba(0,230,138,0.15); color: var(--green); border: 1px solid rgba(0,230,138,0.25); }}
+    .cbf {{ background: rgba(255,81,102,0.12);  color: var(--red);   border: 1px solid rgba(255,81,102,0.20);  }}
 
     /* ── No Setups ──────────────────────────── */
     .no-setups {{
       text-align: center;
-      padding: 60px 20px;
+      padding: 64px 24px;
       border: 1px dashed var(--border);
       border-radius: var(--r);
     }}
-    .no-icon {{ font-size: 32px; color: var(--amber); opacity: 0.5; margin-bottom: 12px; }}
-    .no-msg  {{ font-size: 16px; font-weight: 600; color: var(--t2); margin-bottom: 6px; }}
+    .no-icon {{ font-size: 36px; color: var(--amber); opacity: 0.4; margin-bottom: 14px; }}
+    .no-msg  {{ font-size: 16px; font-weight: 700; color: var(--t2); margin-bottom: 6px; }}
     .no-sub  {{ font-size: 13px; color: var(--t3); }}
 
     /* ── How We Filter Section ──────────────── */
     .rules-wrap {{
-      margin-top: 80px;
-      padding-top: 56px;
-      border-top: 1px solid var(--border);
+      margin-top: 88px;
+      padding-top: 60px;
+      border-top: 1px solid var(--border-accent);
     }}
     .rules-title {{
-      font-size: 26px;
+      font-size: 28px;
       font-weight: 700;
       color: var(--t1);
-      letter-spacing: -0.5px;
-      margin-bottom: 8px;
+      letter-spacing: -0.6px;
+      margin-bottom: 10px;
     }}
     .rules-sub {{
       font-size: 14px;
       color: var(--t2);
-      margin-bottom: 40px;
-      max-width: 560px;
+      margin-bottom: 42px;
+      max-width: 600px;
+      line-height: 1.6;
     }}
     .rules-cols {{
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      gap: 22px;
       margin-bottom: 28px;
     }}
     .rule-card {{
       background: var(--s1);
       border: 1px solid var(--border);
       border-radius: var(--r-sm);
-      padding: 22px;
+      padding: 24px;
     }}
     .rule-card-title {{
       font-size: 10px;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: 2px;
       text-transform: uppercase;
-      margin-bottom: 18px;
+      margin-bottom: 20px;
     }}
     .rule-card.long-rc  .rule-card-title {{ color: var(--green);  }}
     .rule-card.short-rc .rule-card-title {{ color: var(--red);    }}
     .rule-card.both-rc  .rule-card-title {{ color: var(--blue);   }}
-    .rule-item {{ margin-bottom: 14px; }}
+    .rule-item {{ margin-bottom: 16px; }}
     .rule-item:last-child {{ margin-bottom: 0; }}
     .rule-plain {{
       font-size: 14px;
       font-weight: 500;
       color: var(--t1);
-      margin-bottom: 3px;
-      line-height: 1.4;
+      margin-bottom: 4px;
+      line-height: 1.5;
     }}
     .rule-tech {{
       font-size: 11px;
@@ -1600,24 +1639,26 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     /* ── Footer ─────────────────────────────── */
     .footer {{
       text-align: center;
-      margin-top: 48px;
-      padding-top: 28px;
-      border-top: 1px solid var(--border);
+      margin-top: 56px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border-accent);
       font-size: 11px;
       color: var(--t3);
-      line-height: 2.2;
+      line-height: 2;
     }}
 
     /* ── Mobile ─────────────────────────────── */
-    @media (max-width: 620px) {{
+    @media (max-width: 768px) {{
       body {{ padding: 0 12px 80px; }}
-      .card {{ padding: 18px 16px; }}
-      .pg-title {{ font-size: 26px; }}
-      .card-ticker {{ font-size: 22px; }}
-      .card-price  {{ font-size: 20px; }}
+      .wrap {{ max-width: 100%; }}
+      .card {{ padding: 20px; }}
+      .pg-title {{ font-size: 32px; }}
+      .card-ticker {{ font-size: 24px; }}
+      .card-price  {{ font-size: 24px; }}
       .rules-cols  {{ grid-template-columns: 1fr; }}
-      .tp-row      {{ flex-wrap: wrap; }}
-      .pg-meta     {{ gap: 16px; }}
+      .card-grid {{ grid-template-columns: 1fr; }}
+      .pills {{ grid-template-columns: repeat(2, 1fr); }}
+      .sec-head {{ margin-top: 48px; }}
     }}
   </style>
 </head>
@@ -1639,13 +1680,25 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       </div>
     </div>
 
+    <!-- ── Market Monitor (top) ─────────────────────────── -->
+    <div class="sec-head monitor">
+      <div class="sec-head-title">◉ Market Monitor</div>
+      <div class="sec-head-count">GOOGL &amp; NVDA</div>
+      <div class="sec-head-line"></div>
+    </div>
+    <div class="card-grid">
+      {monitor_cards}
+    </div>
+
     <!-- ── Long Setups ─────────────────────────────── -->
     <div class="sec-head long">
       <div class="sec-head-title">▲ Long Setups</div>
       <div class="sec-head-count">{long_count} found</div>
       <div class="sec-head-line"></div>
     </div>
-    {long_cards}
+    <div class="card-grid">
+      {long_cards}
+    </div>
 
     <!-- ── Short Setups ────────────────────────────── -->
     <div class="sec-head short">
@@ -1653,15 +1706,9 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       <div class="sec-head-count">{short_count} found</div>
       <div class="sec-head-line"></div>
     </div>
-    {short_cards}
-
-    <!-- ── Market Monitor ──────────────────────────── -->
-    <div class="sec-head monitor">
-      <div class="sec-head-title">◉ Market Monitor</div>
-      <div class="sec-head-count">GOOGL &amp; NVDA</div>
-      <div class="sec-head-line"></div>
+    <div class="card-grid">
+      {short_cards}
     </div>
-    {monitor_cards}
 
     <!-- ── How We Filter ───────────────────────────── -->
     <div class="rules-wrap">
