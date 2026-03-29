@@ -1108,11 +1108,13 @@ def _format_monitor_card(m: dict, spy_ret: float, qqq_ret: float) -> str:
                    f'<span class="pv" style="color:{ah_col};">{ah_sign}{ah_chg:.2f}%</span></div>')
 
     long_badges = ''.join(
-        f'<span class="cbadge {"cbp" if passes else "cbf"}">{"✓" if passes else "✗"} {label} {actual}</span>'
+        f'<span class="cbadge {"cbp" if passes else "cbf"}" title="{label}: {actual}">'
+        f'{"✓" if passes else "✗"} {label}</span>'
         for label, actual, threshold, passes in m['long_checks']
     )
     short_badges = ''.join(
-        f'<span class="cbadge {"cbp" if passes else "cbf"}">{"✓" if passes else "✗"} {label} {actual}</span>'
+        f'<span class="cbadge {"cbp" if passes else "cbf"}" title="{label}: {actual}">'
+        f'{"✓" if passes else "✗"} {label}</span>'
         for label, actual, threshold, passes in m['short_checks']
     )
 
@@ -1377,7 +1379,7 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
       font-size: 14px;
       font-weight: 700;
       letter-spacing: 0.5px;
-      display: flex;
+      display: none;
     }}
     .card-id {{ flex: 1; min-width: 0; }}
     .card-ticker {{
@@ -1554,15 +1556,19 @@ def build_html(longs: list, shorts: list, monitors: list, slot: str, scan_time: 
     .checks-row {{
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
       margin-top: 10px;
     }}
     .cbadge {{
-      padding: 5px 11px;
-      border-radius: 6px;
+      padding: 4px 8px;
+      border-radius: 5px;
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 0.2px;
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }}
     .cbp {{ background: rgba(0,230,138,0.15); color: var(--green); border: 1px solid rgba(0,230,138,0.25); }}
     .cbf {{ background: rgba(255,81,102,0.12);  color: var(--red);   border: 1px solid rgba(255,81,102,0.20);  }}
